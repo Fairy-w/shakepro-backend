@@ -1,11 +1,14 @@
 package com.shakepro.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shakepro.common.exception.BusinessException;
 import com.shakepro.common.result.ErrorCode;
 import com.shakepro.common.util.JwtUtil;
 import com.shakepro.dto.request.LoginRequest;
 import com.shakepro.dto.request.admin.AdminCocktailSaveRequest;
 import com.shakepro.dto.request.admin.AdminMaterialSaveRequest;
+import com.shakepro.dto.response.admin.AdminAiCocktailFavoriteResponse;
 import com.shakepro.dto.response.admin.AdminCocktailDetailResponse;
 import com.shakepro.dto.response.admin.AdminCocktailListResponse;
 import com.shakepro.dto.response.admin.AdminDashboardResponse;
@@ -15,11 +18,13 @@ import com.shakepro.dto.response.admin.AdminProfileResponse;
 import com.shakepro.dto.response.admin.AdminUserResponse;
 import com.shakepro.entity.Cocktail;
 import com.shakepro.entity.CocktailMaterial;
+import com.shakepro.entity.FavoriteAiCocktail;
 import com.shakepro.entity.Material;
 import com.shakepro.entity.User;
 import com.shakepro.entity.UserRole;
 import com.shakepro.repository.CocktailMaterialRepository;
 import com.shakepro.repository.CocktailRepository;
+import com.shakepro.repository.FavoriteAiCocktailRepository;
 import com.shakepro.repository.FavoriteRepository;
 import com.shakepro.repository.FileRecordRepository;
 import com.shakepro.repository.MaterialRepository;
@@ -50,9 +55,11 @@ public class AdminServiceImpl implements AdminService {
     private final CocktailMaterialRepository cocktailMaterialRepository;
     private final MaterialRepository materialRepository;
     private final FavoriteRepository favoriteRepository;
+    private final FavoriteAiCocktailRepository favoriteAiCocktailRepository;
     private final FileRecordRepository fileRecordRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final ObjectMapper objectMapper;
 
     @Override
     public AdminLoginResponse login(LoginRequest request) {
@@ -88,12 +95,14 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public AdminDashboardResponse getDashboard() {
+        long aiFavoriteCount = favoriteAiCocktailRepository.count();
         return AdminDashboardResponse.builder()
                 .totalUsers(userRepository.count())
                 .totalAdmins(userRepository.countByRole(UserRole.ADMIN))
                 .totalCocktails(cocktailRepository.count())
                 .totalMaterials(materialRepository.count())
-                .totalFavorites(favoriteRepository.count())
+                .totalFavorites(favoriteRepository.count() + aiFavoriteCount)
+                .totalAiCocktailFavorites(aiFavoriteCount)
                 .totalFiles(fileRecordRepository.count())
                 .build();
     }
@@ -109,6 +118,19 @@ public class AdminServiceImpl implements AdminService {
             users = userRepository.findAll(pageable);
         }
         return users.map(AdminUserResponse::from);
+    }
+
+    @Override
+    public Page<AdminAiCocktailFavoriteResponse> listAiCocktailFavorites(String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim().toLowerCase();
+        Page<FavoriteAiCocktail> favorites = favoriteAiCocktailRepository.searchForAdmin(normalizedKeyword, pageable);
+        Map<Long, User> userMap = userRepository.findAllById(favorites.getContent().stream()
+                        .map(FavoriteAiCocktail::getUserId)
+                        .distinct()
+                        .toList()).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+        return favorites.map(favorite -> toAdminAiCocktailFavoriteResponse(favorite, userMap.get(favorite.getUserId())));
     }
 
     @Override
@@ -217,6 +239,14 @@ public class AdminServiceImpl implements AdminService {
         cocktailRepository.delete(cocktail);
     }
 
+    @Override
+    @Transactional
+    public void deleteAiCocktailFavorite(Long id) {
+        FavoriteAiCocktail favorite = favoriteAiCocktailRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "AI配方收藏不存在"));
+        favoriteAiCocktailRepository.delete(favorite);
+    }
+
     private User getAdminUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "用户不存在"));
@@ -262,8 +292,34 @@ public class AdminServiceImpl implements AdminService {
         cocktailMaterialRepository.saveAll(cocktailMaterials);
     }
 
+    private AdminAiCocktailFavoriteResponse toAdminAiCocktailFavoriteResponse(FavoriteAiCocktail favorite, User user) {
+        return AdminAiCocktailFavoriteResponse.builder()
+                .id(favorite.getId())
+                .userId(favorite.getUserId())
+                .username(user != null ? user.getUsername() : null)
+                .nickname(user != null ? user.getNickname() : null)
+                .recipeKey(favorite.getRecipeKey())
+                .name(favorite.getName())
+                .description(favorite.getDescription())
+                .materials(readStringList(favorite.getMaterialsJson()))
+                .steps(readStringList(favorite.getStepsJson()))
+                .prompt(favorite.getPrompt())
+                .source(favorite.getSource())
+                .createdAt(favorite.getCreatedAt())
+                .updatedAt(favorite.getUpdatedAt())
+                .build();
+    }
+
     private String normalizeCategory(String category) {
         return trimToNull(category);
+    }
+
+    private List<String> readStringList(String value) {
+        try {
+            return objectMapper.readValue(value, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.SERVER_ERROR, "解析AI配方收藏数据失败");
+        }
     }
 
     private String trimToNull(String value) {
