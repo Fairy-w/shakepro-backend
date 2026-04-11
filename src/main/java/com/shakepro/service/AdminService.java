@@ -3,6 +3,7 @@ package com.shakepro.service;
 import com.shakepro.dto.request.LoginRequest;
 import com.shakepro.dto.request.admin.AdminCocktailSaveRequest;
 import com.shakepro.dto.request.admin.AdminMaterialSaveRequest;
+import com.shakepro.dto.response.admin.AdminAiCocktailFavoriteResponse;
 import com.shakepro.dto.response.admin.AdminCocktailDetailResponse;
 import com.shakepro.dto.response.admin.AdminCocktailListResponse;
 import com.shakepro.dto.response.admin.AdminDashboardResponse;
@@ -24,6 +25,8 @@ public interface AdminService {
 
     Page<AdminUserResponse> listUsers(String keyword, int page, int size);
 
+    Page<AdminAiCocktailFavoriteResponse> listAiCocktailFavorites(String keyword, int page, int size);
+
     List<AdminMaterialResponse> listMaterials(String keyword, String category);
 
     AdminMaterialResponse createMaterial(AdminMaterialSaveRequest request);
@@ -41,4 +44,6 @@ public interface AdminService {
     AdminCocktailDetailResponse updateCocktail(Long id, AdminCocktailSaveRequest request);
 
     void deleteCocktail(Long id);
+
+    void deleteAiCocktailFavorite(Long id);
 }

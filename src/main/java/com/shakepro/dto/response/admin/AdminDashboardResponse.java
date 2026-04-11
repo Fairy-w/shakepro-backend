@@ -12,5 +12,6 @@ public class AdminDashboardResponse {
     private long totalCocktails;
     private long totalMaterials;
     private long totalFavorites;
+    private long totalAiCocktailFavorites;
     private long totalFiles;
 }

@@ -3,6 +3,7 @@ package com.shakepro.controller;
 import com.shakepro.common.result.ApiResponse;
 import com.shakepro.dto.request.admin.AdminCocktailSaveRequest;
 import com.shakepro.dto.request.admin.AdminMaterialSaveRequest;
+import com.shakepro.dto.response.admin.AdminAiCocktailFavoriteResponse;
 import com.shakepro.dto.response.admin.AdminCocktailDetailResponse;
 import com.shakepro.dto.response.admin.AdminCocktailListResponse;
 import com.shakepro.dto.response.admin.AdminDashboardResponse;
@@ -47,6 +48,15 @@ public class AdminController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ApiResponse.success(adminService.listUsers(keyword, page, size));
+    }
+
+    @Operation(summary = "AI配方收藏分页列表")
+    @GetMapping("/favorites/ai-cocktails")
+    public ApiResponse<Page<AdminAiCocktailFavoriteResponse>> aiCocktailFavorites(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.success(adminService.listAiCocktailFavorites(keyword, page, size));
     }
 
     @Operation(summary = "材料列表")
@@ -112,6 +122,13 @@ public class AdminController {
     @DeleteMapping("/cocktails/{id}")
     public ApiResponse<Void> deleteCocktail(@PathVariable Long id) {
         adminService.deleteCocktail(id);
+        return ApiResponse.success();
+    }
+
+    @Operation(summary = "删除AI配方收藏")
+    @DeleteMapping("/favorites/ai-cocktails/{id}")
+    public ApiResponse<Void> deleteAiCocktailFavorite(@PathVariable Long id) {
+        adminService.deleteAiCocktailFavorite(id);
         return ApiResponse.success();
     }
 }
