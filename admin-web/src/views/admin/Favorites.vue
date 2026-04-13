@@ -15,8 +15,9 @@ const pageData = ref<PageResult<AdminAiFavorite>>({
 })
 
 const totalMaterials = computed(() =>
-  pageData.value.content.reduce((sum, item) => sum + item.materials.length, 0)
+  pageData.value.content.reduce((sum, item) => sum + item.materials.length, 0),
 )
+const totalSteps = computed(() => pageData.value.content.reduce((sum, item) => sum + item.steps.length, 0))
 
 async function loadFavorites(nextPage = 0) {
   loading.value = true
@@ -54,85 +55,125 @@ onMounted(() => loadFavorites())
 </script>
 
 <template>
-  <section>
-    <div class="page-head">
-      <div>
-        <h1 class="page-title">收藏管理</h1>
-        <p class="page-subtitle">
-          当前页面聚焦 AI 调酒配方收藏。管理员可以搜索用户或配方，查看完整内容，并删除不需要保留的收藏记录。
-        </p>
+  <section class="console-page">
+    <article class="hero-panel card">
+      <div class="page-head hero-head">
+        <div>
+          <p class="hero-tag">AI FAVORITES / 收藏配方沉淀池</p>
+          <h1 class="page-title">收藏管理</h1>
+          <p class="page-subtitle">
+            统一查看 AI 调酒配方收藏记录、用户来源和完整内容，方便做删改、回溯和内容质量盘点。
+          </p>
+        </div>
+        <button class="button-primary" :disabled="loading" @click="loadFavorites(pageData.number)">
+          {{ loading ? '刷新中...' : '刷新收藏池' }}
+        </button>
       </div>
-      <div class="head-stats">
-        <span class="badge">收藏 {{ pageData.totalElements }} 条</span>
-        <span class="badge warm">当前页材料项 {{ totalMaterials }} 条</span>
+
+      <div class="metric-grid">
+        <article class="metric-card">
+          <span>收藏记录</span>
+          <strong>{{ pageData.totalElements }}</strong>
+          <p>当前后台可检索到的 AI 收藏条数</p>
+        </article>
+        <article class="metric-card accent">
+          <span>当前页材料项</span>
+          <strong>{{ totalMaterials }}</strong>
+          <p>用于估算收藏配方复杂度</p>
+        </article>
+        <article class="metric-card secondary">
+          <span>当前页步骤数</span>
+          <strong>{{ totalSteps }}</strong>
+          <p>便于快速辨别长短配方</p>
+        </article>
       </div>
-    </div>
+    </article>
 
-    <div class="toolbar">
-      <input
-        v-model="keyword"
-        class="field search"
-        type="text"
-        placeholder="搜索用户名、配方名、描述、prompt"
-        @keyup.enter="loadFavorites()"
-      />
-      <button class="button-primary" :disabled="loading" @click="loadFavorites()">{{ loading ? '查询中...' : '查询' }}</button>
-    </div>
+    <article class="filter-panel card">
+      <div class="panel-headline">
+        <div>
+          <p class="panel-tag">SEARCH</p>
+          <h2>搜索收藏记录</h2>
+        </div>
+        <span class="badge">第 {{ pageData.number + 1 }} / {{ Math.max(pageData.totalPages, 1) }} 页</span>
+      </div>
 
-    <div class="card table-card">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>收藏用户</th>
-            <th>配方</th>
-            <th>摘要</th>
-            <th>来源</th>
-            <th>收藏时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in pageData.content" :key="item.id">
-            <td>#{{ item.id }}</td>
-            <td>
-              <div class="user-cell">
-                <strong>{{ item.nickname || item.username || `用户${item.userId}` }}</strong>
-                <span>{{ item.username || `ID ${item.userId}` }}</span>
-              </div>
-            </td>
-            <td>
-              <div class="recipe-cell">
-                <strong>{{ item.name }}</strong>
-                <p>{{ item.description || '暂无风味描述' }}</p>
-              </div>
-            </td>
-            <td>
-              <div class="meta-stack">
-                <span>{{ item.materials.length }} 个材料</span>
-                <span>{{ item.steps.length }} 个步骤</span>
-                <code>{{ item.recipeKey }}</code>
-              </div>
-            </td>
-            <td><span class="source-chip">{{ item.source || 'ai' }}</span></td>
-            <td>{{ item.createdAt?.replace('T', ' ') || '-' }}</td>
-            <td>
-              <div class="actions">
-                <button class="button-secondary" @click="selectedFavorite = item">查看</button>
-                <button class="button-danger" :disabled="deletingId === item.id" @click="removeFavorite(item)">
-                  {{ deletingId === item.id ? '删除中...' : '删除' }}
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr v-if="!pageData.content.length">
-            <td colspan="7" class="empty">暂无收藏记录</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <div class="toolbar">
+        <input
+          v-model="keyword"
+          class="field search"
+          type="text"
+          placeholder="搜索用户名、配方名、描述、prompt"
+          @keyup.enter="loadFavorites()"
+        />
+        <button class="button-secondary" :disabled="loading" @click="loadFavorites()">{{ loading ? '查询中...' : '立即查询' }}</button>
+      </div>
+    </article>
 
-    <div class="pager">
+    <article class="table-panel card">
+      <div class="panel-headline compact">
+        <div>
+          <p class="panel-tag">FAVORITE STREAM</p>
+          <h2>收藏记录列表</h2>
+        </div>
+        <span class="badge subtle">双击查看完整配方结构</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>收藏用户</th>
+              <th>配方</th>
+              <th>摘要</th>
+              <th>来源</th>
+              <th>收藏时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in pageData.content" :key="item.id" @dblclick="selectedFavorite = item">
+              <td>#{{ item.id }}</td>
+              <td>
+                <div class="cell-stack">
+                  <strong>{{ item.nickname || item.username || `用户${item.userId}` }}</strong>
+                  <span>{{ item.username || `ID ${item.userId}` }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="cell-stack">
+                  <strong>{{ item.name }}</strong>
+                  <span>{{ item.description || '暂无风味描述' }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="summary-stack">
+                  <span>{{ item.materials.length }} 个材料</span>
+                  <span>{{ item.steps.length }} 个步骤</span>
+                  <code>{{ item.recipeKey }}</code>
+                </div>
+              </td>
+              <td><span class="source-chip">{{ item.source || 'ai' }}</span></td>
+              <td>{{ item.createdAt?.replace('T', ' ') || '-' }}</td>
+              <td>
+                <div class="actions">
+                  <button class="button-secondary" @click="selectedFavorite = item">查看</button>
+                  <button class="button-danger" :disabled="deletingId === item.id" @click="removeFavorite(item)">
+                    {{ deletingId === item.id ? '删除中...' : '删除' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!pageData.content.length">
+              <td colspan="7" class="empty">当前没有收藏记录</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <div class="pager card">
       <button class="button-secondary" :disabled="pageData.number <= 0 || loading" @click="loadFavorites(pageData.number - 1)">上一页</button>
       <span>第 {{ pageData.number + 1 }} / {{ Math.max(pageData.totalPages, 1) }} 页</span>
       <button
@@ -148,11 +189,26 @@ onMounted(() => loadFavorites())
       <div class="modal-panel detail-panel">
         <div class="detail-head">
           <div>
-            <p class="detail-tag">AI FAVORITE</p>
+            <p class="detail-tag">FAVORITE DETAIL</p>
             <h2>{{ selectedFavorite.name }}</h2>
             <p class="detail-desc">{{ selectedFavorite.description || '暂无风味描述' }}</p>
           </div>
           <button class="button-secondary" @click="selectedFavorite = null">关闭</button>
+        </div>
+
+        <div class="detail-metrics">
+          <article class="detail-metric">
+            <span>收藏用户</span>
+            <strong>{{ selectedFavorite.nickname || selectedFavorite.username || selectedFavorite.userId }}</strong>
+          </article>
+          <article class="detail-metric">
+            <span>材料数量</span>
+            <strong>{{ selectedFavorite.materials.length }}</strong>
+          </article>
+          <article class="detail-metric">
+            <span>步骤数量</span>
+            <strong>{{ selectedFavorite.steps.length }}</strong>
+          </article>
         </div>
 
         <div class="detail-grid">
@@ -195,73 +251,164 @@ onMounted(() => loadFavorites())
 </template>
 
 <style scoped>
-.head-stats {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+.console-page {
+  display: grid;
+  gap: 18px;
 }
 
-.warm {
-  background: rgba(245, 158, 11, 0.12);
-  color: #b45309;
+.hero-panel,
+.filter-panel,
+.table-panel,
+.pager {
+  padding: 22px;
+}
+
+.hero-panel {
+  background:
+    radial-gradient(circle at top right, rgba(72, 215, 255, 0.16), transparent 30%),
+    linear-gradient(180deg, rgba(11, 29, 46, 0.96), rgba(7, 18, 31, 0.98));
+}
+
+.hero-head {
+  margin-bottom: 18px;
+}
+
+.hero-tag,
+.panel-tag,
+.detail-tag {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  color: var(--primary);
+}
+
+.metric-grid,
+.detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-card,
+.detail-metric {
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(8, 22, 36, 0.8);
+  border: 1px solid rgba(72, 215, 255, 0.12);
+}
+
+.metric-card span,
+.metric-card p,
+.detail-metric span,
+.detail-desc,
+.summary-stack span,
+.cell-stack span {
+  color: var(--ink-600);
+}
+
+.metric-card strong,
+.detail-metric strong {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 2.1rem;
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.metric-card p {
+  margin: 0;
+}
+
+.metric-card.accent {
+  border-color: rgba(255, 182, 72, 0.16);
+}
+
+.metric-card.secondary {
+  border-color: rgba(76, 111, 255, 0.2);
+}
+
+.panel-headline {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.panel-headline.compact {
+  margin-bottom: 16px;
+}
+
+.panel-headline h2 {
+  margin: 0;
+  font-size: 1.28rem;
+  letter-spacing: -0.04em;
 }
 
 .search {
-  max-width: 360px;
+  max-width: 380px;
 }
 
-.table-card {
-  overflow: hidden;
+.subtle {
+  background: rgba(76, 111, 255, 0.14);
+  color: #cdd6ff;
+}
+
+.table-wrap {
+  overflow-x: auto;
 }
 
 th,
-td {
-  padding: 16px 18px;
+ td {
+  padding: 16px 14px;
   text-align: left;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
 }
 
 th {
-  font-size: 0.84rem;
-  letter-spacing: 0.08em;
   color: var(--ink-600);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
 }
 
-.user-cell,
-.recipe-cell,
-.meta-stack {
+tbody tr {
+  background: rgba(7, 18, 31, 0.16);
+}
+
+tbody tr:hover {
+  background: rgba(72, 215, 255, 0.06);
+}
+
+.cell-stack,
+.summary-stack {
   display: grid;
   gap: 6px;
 }
 
-.user-cell span,
-.recipe-cell p,
-.meta-stack span {
-  color: var(--ink-600);
-}
-
-.recipe-cell p {
-  margin: 0;
-  max-width: 320px;
-}
-
-.meta-stack code {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(21, 33, 43, 0.06);
-  color: var(--ink-600);
-  font-size: 0.78rem;
+.summary-stack code,
+.hash-text {
   word-break: break-all;
+}
+
+.summary-stack code {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(76, 111, 255, 0.12);
+  color: #c9d4ff;
 }
 
 .source-chip {
   display: inline-flex;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(15, 118, 110, 0.12);
-  color: var(--primary-strong);
+  align-items: center;
+  justify-content: center;
+  min-width: 68px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--success);
   font-weight: 700;
 }
 
@@ -274,6 +421,7 @@ th {
 .empty {
   text-align: center;
   color: var(--ink-600);
+  padding: 28px 16px;
 }
 
 .pager {
@@ -281,10 +429,10 @@ th {
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  margin-top: 18px;
 }
 
 .detail-panel {
+  width: min(980px, 100%);
   display: grid;
   gap: 18px;
 }
@@ -296,22 +444,10 @@ th {
   align-items: flex-start;
 }
 
-.detail-tag {
-  margin: 0 0 8px;
-  color: var(--ink-600);
-  letter-spacing: 0.18em;
-  font-size: 0.72rem;
-}
-
 .detail-head h2 {
   margin: 0;
-  font-size: 1.8rem;
-  letter-spacing: -0.04em;
-}
-
-.detail-desc {
-  margin: 10px 0 0;
-  color: var(--ink-600);
+  font-size: 2rem;
+  letter-spacing: -0.05em;
 }
 
 .detail-grid {
@@ -323,11 +459,13 @@ th {
 .detail-card {
   padding: 20px;
   border-radius: 22px;
-  background: rgba(246, 245, 239, 0.9);
+  background: rgba(8, 22, 36, 0.76);
+  border: 1px solid rgba(153, 199, 255, 0.1);
 }
 
 .detail-card h3 {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
+  font-size: 1.16rem;
 }
 
 .detail-card ul,
@@ -336,34 +474,44 @@ th {
   padding-left: 18px;
   display: grid;
   gap: 10px;
-}
-
-.prompt-card {
-  margin: 0;
-  padding: 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.86);
   color: var(--ink-800);
 }
 
-.hash-text {
-  margin: 14px 0 0;
-  color: var(--ink-600);
-  word-break: break-all;
+.prompt-card {
+  margin: 0 0 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(76, 111, 255, 0.1);
+  color: var(--ink-950);
+  white-space: pre-wrap;
 }
 
-@media (max-width: 1100px) {
-  .table-card {
-    overflow-x: auto;
+.hash-text {
+  margin: 0;
+  color: var(--ink-600);
+}
+
+@media (max-width: 960px) {
+  .metric-grid,
+  .detail-metrics,
+  .detail-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 900px) {
-  .pager,
+@media (max-width: 720px) {
+  .hero-panel,
+  .filter-panel,
+  .table-panel,
+  .pager {
+    padding: 18px;
+  }
+
+  .panel-headline,
   .detail-head,
-  .detail-grid {
+  .pager {
     flex-direction: column;
-    grid-template-columns: 1fr;
+    align-items: flex-start;
   }
 }
 </style>

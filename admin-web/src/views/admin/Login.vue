@@ -14,6 +14,14 @@ const form = ref({
 const loading = ref(false)
 const error = ref('')
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) {
+    return err.message
+  }
+
+  return '登录失败'
+}
+
 async function submit() {
   if (!form.value.username || !form.value.password) {
     error.value = '请输入管理员账号和密码'
@@ -27,8 +35,8 @@ async function submit() {
     await authStore.login(form.value)
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
     router.replace(redirect)
-  } catch (err: any) {
-    error.value = err.message || '登录失败'
+  } catch (err: unknown) {
+    error.value = getErrorMessage(err)
   } finally {
     loading.value = false
   }
@@ -37,36 +45,52 @@ async function submit() {
 
 <template>
   <div class="login-page">
-    <section class="login-brand">
-      <p class="eyebrow">SHAKEPRO ADMIN CONSOLE</p>
-      <h1>把鸡尾酒内容、用户和素材都收进一个控制台。</h1>
-      <p class="intro">
-        现在这套 Web 已经切成后台管理端，鸿蒙 App 负责 C 端体验，这里专注数据治理和内容运营。
-      </p>
-      <div class="brand-grid">
-        <article class="brand-card">
+    <section class="login-stage card">
+      <div class="stage-copy">
+        <p class="stage-tag">SHAKEPRO / 深海调酒台</p>
+        <h1>让采集、解析、审核、发布都汇入同一套后台控制台。</h1>
+        <p class="stage-intro">
+          这一版登录页已经和配方采集工作台统一成深海蓝视觉。管理员登录后可以直接进入同风格流水线后台，演示更完整。
+        </p>
+      </div>
+
+      <div class="pipeline-preview">
+        <article class="preview-card active">
           <span>01</span>
-          <strong>仪表盘</strong>
-          <p>快速看用户、鸡尾酒、材料、收藏和文件规模。</p>
+          <div>
+            <strong>抓取入池</strong>
+            <p>来源站点、入口链接、抓取数量统一发起。</p>
+          </div>
         </article>
-        <article class="brand-card">
+        <article class="preview-card">
           <span>02</span>
-          <strong>内容维护</strong>
-          <p>直接管理鸡尾酒配方与材料库，避免前后台数据割裂。</p>
+          <div>
+            <strong>结构化解析</strong>
+            <p>原始标题、配料与步骤自动整理成结构化结果。</p>
+          </div>
         </article>
-        <article class="brand-card">
+        <article class="preview-card">
           <span>03</span>
-          <strong>可继续扩展</strong>
-          <p>后续可继续接操作日志、Banner 管理和 AI 调用记录。</p>
+          <div>
+            <strong>AI 详情生成</strong>
+            <p>补齐故事、亮点、风味标签与详情页文案。</p>
+          </div>
+        </article>
+        <article class="preview-card">
+          <span>04</span>
+          <div>
+            <strong>审核发布</strong>
+            <p>人工校对后进入后台成品库与终端消费链路。</p>
+          </div>
         </article>
       </div>
     </section>
 
     <section class="login-panel card">
       <div class="panel-head">
-        <p class="eyebrow darker">ADMIN LOGIN</p>
+        <p class="panel-tag">ADMIN ACCESS</p>
         <h2>管理员登录</h2>
-        <p>默认已预置管理员账号，可直接登录后开始管理。</p>
+        <p>默认预置了管理员账号，可直接进入后台查看整套内容生产与运营链路。</p>
       </div>
 
       <form class="login-form" @submit.prevent="submit">
@@ -89,9 +113,14 @@ async function submit() {
         <p v-if="error" class="error-text">{{ error }}</p>
 
         <button class="button-primary submit-button" type="submit" :disabled="loading">
-          {{ loading ? '登录中...' : '进入后台' }}
+          {{ loading ? '登录中...' : '进入深海调酒台' }}
         </button>
       </form>
+
+      <div class="login-footnote">
+        <span class="footnote-chip">后台统一深色视觉</span>
+        <span class="footnote-chip subtle">可直接演示配方采集流水线</span>
+      </div>
     </section>
   </div>
 </template>
@@ -100,120 +129,115 @@ async function submit() {
 .login-page {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 28px;
-  padding: 32px;
-}
-
-.login-brand {
-  padding: 34px;
-  border-radius: 32px;
+  grid-template-columns: 1.08fr 0.92fr;
+  gap: 22px;
+  padding: 22px;
   background:
-    linear-gradient(135deg, rgba(15, 118, 110, 0.92), rgba(21, 33, 43, 0.92)),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent);
-  color: white;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-  position: relative;
+    radial-gradient(circle at top left, rgba(72, 215, 255, 0.12), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(76, 111, 255, 0.14), transparent 32%);
 }
 
-.login-brand::after {
-  content: '';
-  position: absolute;
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
-  right: -70px;
-  top: -90px;
-  background: rgba(245, 158, 11, 0.26);
-  filter: blur(10px);
+.login-stage,
+.login-panel {
+  padding: 30px;
+  min-height: calc(100vh - 44px);
 }
 
-.eyebrow {
-  letter-spacing: 0.28em;
-  font-size: 0.72rem;
-  opacity: 0.82;
-}
-
-.darker {
-  color: var(--ink-600);
-}
-
-.login-brand h1 {
-  font-size: clamp(2.4rem, 4vw, 4.6rem);
-  line-height: 0.95;
-  letter-spacing: -0.05em;
-  margin-top: 18px;
-  max-width: 720px;
-}
-
-.intro {
-  margin-top: 18px;
-  font-size: 1.04rem;
-  max-width: 580px;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.brand-grid {
-  margin-top: 36px;
+.login-stage {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(72, 215, 255, 0.18), transparent 30%),
+    linear-gradient(180deg, rgba(9, 24, 39, 0.98), rgba(7, 18, 31, 0.98));
+}
+
+.stage-tag,
+.panel-tag {
+  margin: 0 0 12px;
+  font-size: 0.74rem;
+  letter-spacing: 0.24em;
+  color: var(--primary);
+}
+
+.stage-copy h1 {
+  margin: 0;
+  font-size: clamp(2.6rem, 5vw, 4.8rem);
+  line-height: 0.94;
+  letter-spacing: -0.06em;
+}
+
+.stage-intro {
+  max-width: 620px;
+  margin-top: 18px;
+  color: var(--ink-600);
+  font-size: 1.04rem;
+}
+
+.pipeline-preview {
+  display: grid;
   gap: 14px;
+  align-content: end;
 }
 
-.brand-card {
-  padding: 18px;
+.preview-card {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 16px;
+  padding: 20px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(8px);
+  background: rgba(8, 22, 36, 0.8);
+  border: 1px solid rgba(153, 199, 255, 0.1);
 }
 
-.brand-card span {
+.preview-card.active {
+  border-color: rgba(72, 215, 255, 0.24);
+  background: linear-gradient(135deg, rgba(12, 35, 54, 0.96), rgba(8, 22, 36, 0.88));
+}
+
+.preview-card span {
   display: inline-flex;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 64px;
+  height: 64px;
   align-items: center;
   justify-content: center;
-  margin-bottom: 18px;
+  border-radius: 18px;
+  background: rgba(72, 215, 255, 0.12);
+  color: var(--primary);
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.18);
 }
 
-.brand-card strong {
+.preview-card strong {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-size: 1.08rem;
 }
 
-.brand-card p,
+.preview-card p,
 .panel-head p {
-  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  color: var(--ink-600);
 }
 
 .login-panel {
   align-self: center;
-  padding: 28px;
-  background: rgba(255, 253, 248, 0.95);
+  min-height: auto;
+  background:
+    radial-gradient(circle at top left, rgba(76, 111, 255, 0.14), transparent 30%),
+    linear-gradient(180deg, rgba(10, 27, 43, 0.96), rgba(7, 18, 31, 0.98));
+  display: grid;
+  gap: 28px;
 }
 
 .panel-head h2 {
-  font-size: 2rem;
+  margin: 0 0 10px;
+  font-size: 2.1rem;
   letter-spacing: -0.04em;
-  margin: 12px 0 6px;
-}
-
-.panel-head p {
-  color: var(--ink-600);
 }
 
 .login-form {
   display: grid;
   gap: 18px;
-  margin-top: 28px;
 }
 
 .login-form label {
@@ -229,28 +253,55 @@ async function submit() {
 }
 
 .error-text {
+  margin: 0;
   color: var(--danger);
-  font-weight: 600;
+  font-weight: 700;
 }
 
-@media (max-width: 1040px) {
+.login-footnote {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.footnote-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(72, 215, 255, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(72, 215, 255, 0.14);
+}
+
+.footnote-chip.subtle {
+  background: rgba(76, 111, 255, 0.14);
+  color: #cdd6ff;
+}
+
+@media (max-width: 1080px) {
   .login-page {
     grid-template-columns: 1fr;
   }
 
-  .brand-grid {
-    grid-template-columns: 1fr;
+  .login-stage,
+  .login-panel {
+    min-height: auto;
   }
 }
 
 @media (max-width: 640px) {
   .login-page {
-    padding: 16px;
+    padding: 14px;
   }
 
-  .login-brand,
+  .login-stage,
   .login-panel {
     padding: 22px;
+  }
+
+  .preview-card {
+    grid-template-columns: 1fr;
   }
 }
 </style>

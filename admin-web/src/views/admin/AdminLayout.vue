@@ -8,11 +8,12 @@ const route = useRoute()
 const router = useRouter()
 
 const navItems = [
-  { label: '仪表盘', to: '/dashboard' },
-  { label: '用户管理', to: '/users' },
-  { label: '收藏管理', to: '/favorites' },
-  { label: '材料管理', to: '/materials' },
-  { label: '鸡尾酒管理', to: '/cocktails' },
+  { label: '仪表盘', to: '/dashboard', tag: '00' },
+  { label: '配方采集工作台', to: '/recipe-pipeline', tag: '01' },
+  { label: '用户管理', to: '/users', tag: '02' },
+  { label: '收藏管理', to: '/favorites', tag: '03' },
+  { label: '材料管理', to: '/materials', tag: '04' },
+  { label: '鸡尾酒管理', to: '/cocktails', tag: '05' },
 ]
 
 const currentLabel = computed(() => navItems.find((item) => route.path.startsWith(item.to))?.label || '后台管理')
@@ -32,10 +33,10 @@ function logout() {
 <template>
   <div class="admin-shell layout-grid">
     <aside class="sidebar card">
-      <div>
-        <p class="sidebar-tag">ShakePro</p>
-        <h1>Admin Console</h1>
-        <p class="sidebar-copy">运营、配方、收藏、用户和素材统一维护。</p>
+      <div class="sidebar-head">
+        <p class="sidebar-tag">SHAKEPRO / 深海调酒台</p>
+        <h1>Admin Pipeline</h1>
+        <p class="sidebar-copy">把采集、审核、配方、用户和素材统一进同一套深海控制台里。</p>
       </div>
 
       <nav class="nav-list">
@@ -46,16 +47,18 @@ function logout() {
           class="nav-link"
           :class="{ active: route.path.startsWith(item.to) }"
         >
-          {{ item.label }}
+          <span class="nav-tag">{{ item.tag }}</span>
+          <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
 
       <div class="sidebar-foot">
         <div class="profile-badge">
+          <span class="profile-tag">CURRENT OPERATOR</span>
           <strong>{{ authStore.nickname || '管理员' }}</strong>
-          <span>{{ authStore.user?.role || 'ADMIN' }}</span>
+          <small>{{ authStore.user?.role || 'ADMIN' }}</small>
         </div>
-        <button class="button-secondary" @click="logout">退出登录</button>
+        <button class="button-secondary ghost" @click="logout">退出登录</button>
       </div>
     </aside>
 
@@ -67,7 +70,7 @@ function logout() {
         </div>
         <div class="topbar-meta">
           <span class="badge">后台管理端</span>
-          <span class="badge subtle">鸿蒙 App 负责 C 端</span>
+          <span class="badge subtle">统一风格已切换为深海调酒台</span>
         </div>
       </header>
 
@@ -81,7 +84,7 @@ function logout() {
 <style scoped>
 .layout-grid {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 300px 1fr;
   gap: 18px;
   padding: 18px;
 }
@@ -93,53 +96,72 @@ function logout() {
   flex-direction: column;
   justify-content: space-between;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 246, 245, 0.9)),
-    radial-gradient(circle at top right, rgba(15, 118, 110, 0.1), transparent 42%);
+    radial-gradient(circle at top right, rgba(72, 215, 255, 0.18), transparent 32%),
+    linear-gradient(180deg, rgba(9, 24, 39, 0.98), rgba(7, 18, 31, 0.98));
 }
 
 .sidebar-tag,
-.topbar-tag {
+.topbar-tag,
+.profile-tag {
   letter-spacing: 0.22em;
   font-size: 0.74rem;
-  color: var(--ink-600);
+  color: var(--primary);
+  text-transform: uppercase;
 }
 
 .sidebar h1 {
-  font-size: 2rem;
+  font-size: 2.1rem;
   line-height: 0.95;
   letter-spacing: -0.05em;
-  margin-top: 14px;
+  margin: 14px 0 0;
+  color: var(--ink-950);
 }
 
 .sidebar-copy {
-  margin-top: 10px;
+  margin-top: 12px;
   color: var(--ink-600);
 }
 
 .nav-list {
   display: grid;
   gap: 10px;
-  margin: 26px 0;
+  margin: 28px 0;
 }
 
 .nav-link {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 12px;
+  align-items: center;
   padding: 14px 16px;
   border-radius: 18px;
   color: var(--ink-800);
   font-weight: 700;
   border: 1px solid transparent;
-  transition: background 0.2s ease, transform 0.2s ease;
+  background: rgba(11, 29, 46, 0.62);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.8);
   transform: translateX(2px);
+  border-color: rgba(72, 215, 255, 0.16);
 }
 
 .nav-link.active {
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(245, 158, 11, 0.1));
-  border-color: rgba(15, 118, 110, 0.16);
-  color: var(--primary-strong);
+  background: linear-gradient(135deg, rgba(14, 37, 59, 0.96), rgba(10, 27, 43, 0.92));
+  border-color: rgba(72, 215, 255, 0.24);
+  color: var(--ink-950);
+}
+
+.nav-tag {
+  display: inline-flex;
+  width: 46px;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(72, 215, 255, 0.12);
+  color: var(--primary);
 }
 
 .sidebar-foot {
@@ -150,16 +172,23 @@ function logout() {
 .profile-badge {
   padding: 16px;
   border-radius: 20px;
-  background: rgba(15, 118, 110, 0.08);
+  background: rgba(11, 29, 46, 0.82);
+  border: 1px solid rgba(153, 199, 255, 0.08);
 }
 
 .profile-badge strong {
   display: block;
+  margin-top: 10px;
 }
 
-.profile-badge span {
+.profile-badge small {
+  display: block;
+  margin-top: 6px;
   color: var(--ink-600);
-  font-size: 0.9rem;
+}
+
+.ghost {
+  width: 100%;
 }
 
 .main-panel {
@@ -173,12 +202,16 @@ function logout() {
   gap: 18px;
   align-items: center;
   padding: 20px 24px;
+  background:
+    radial-gradient(circle at top left, rgba(72, 215, 255, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(9, 24, 39, 0.94), rgba(7, 18, 31, 0.96));
 }
 
 .topbar h2 {
-  margin-top: 6px;
-  font-size: 1.8rem;
+  margin: 8px 0 0;
+  font-size: 1.9rem;
   letter-spacing: -0.05em;
+  color: var(--ink-950);
 }
 
 .topbar-meta {
@@ -189,15 +222,15 @@ function logout() {
 }
 
 .subtle {
-  background: rgba(245, 158, 11, 0.14);
-  color: #b45309;
+  background: rgba(76, 111, 255, 0.14);
+  color: #bfc9ff;
 }
 
 .view-slot {
   padding-bottom: 18px;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1180px) {
   .layout-grid {
     grid-template-columns: 1fr;
   }
@@ -217,9 +250,19 @@ function logout() {
     padding: 18px;
   }
 
-  .topbar {
+  .topbar,
+  .topbar-meta {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .nav-link {
+    grid-template-columns: 40px 1fr;
+  }
+
+  .nav-tag {
+    width: 40px;
+    height: 40px;
   }
 }
 </style>

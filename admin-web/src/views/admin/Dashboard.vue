@@ -6,11 +6,11 @@ const stats = ref<DashboardStats | null>(null)
 const loading = ref(false)
 
 const statCards = [
-  { key: 'totalUsers', label: '用户总数', tone: 'green' },
-  { key: 'totalAdmins', label: '管理员', tone: 'gold' },
+  { key: 'totalUsers', label: '用户总数', tone: 'cyan' },
+  { key: 'totalAdmins', label: '管理员', tone: 'amber' },
   { key: 'totalCocktails', label: '鸡尾酒条目', tone: 'blue' },
-  { key: 'totalMaterials', label: '材料条目', tone: 'green' },
-  { key: 'totalFavorites', label: '收藏记录', tone: 'gold' },
+  { key: 'totalMaterials', label: '材料条目', tone: 'cyan' },
+  { key: 'totalFavorites', label: '收藏记录', tone: 'amber' },
   { key: 'totalAiCocktailFavorites', label: 'AI 配方收藏', tone: 'blue' },
   { key: 'totalFiles', label: '文件记录', tone: 'blue' },
 ] as const
@@ -28,11 +28,11 @@ onMounted(loadDashboard)
 </script>
 
 <template>
-  <section>
+  <section class="dashboard-page">
     <div class="page-head">
       <div>
         <h1 class="page-title">后台总览</h1>
-        <p class="page-subtitle">这一页先给你最核心的运营和内容规模感知，方便答辩时直接展示系统整体数据面貌。</p>
+        <p class="page-subtitle">用统一的深海控制台视角查看用户、内容、素材和 AI 收藏规模，答辩时也更容易讲清楚整套系统的数据闭环。</p>
       </div>
       <button class="button-primary" :disabled="loading" @click="loadDashboard">
         {{ loading ? '刷新中...' : '刷新数据' }}
@@ -49,21 +49,21 @@ onMounted(loadDashboard)
     <div class="insight-grid">
       <article class="insight-panel card">
         <p class="insight-tag">CONTROL NOTES</p>
-        <h3>后台改造已经完成的重点</h3>
+        <h3>当前控制台已经完成的重点</h3>
         <ul>
-          <li>现有 Web 路由已切为后台管理端，不再承载 C 端页面。</li>
-          <li>新增管理员鉴权和 <code>/api/admin/**</code> 接口层。</li>
-          <li>用户、收藏、材料、鸡尾酒四类核心管理对象已纳入后台。</li>
+          <li>后台路由、登录和导航已经统一切到深海调酒台风格。</li>
+          <li>用户、收藏、材料、鸡尾酒和配方采集工作台共用同一套视觉系统。</li>
+          <li>AI 内容生产流程现在能在后台用流水线方式完整演示。</li>
         </ul>
       </article>
 
       <article class="insight-panel accent card">
         <p class="insight-tag">NEXT STEP</p>
-        <h3>下一步可以继续补什么</h3>
+        <h3>下一步可以继续补的能力</h3>
         <ul>
+          <li>操作日志和审核记录</li>
           <li>Banner / 分类配置</li>
-          <li>用户启停用和密码重置</li>
-          <li>AI 推荐调用记录与运营分析</li>
+          <li>AI 调用统计和运营分析</li>
         </ul>
       </article>
     </div>
@@ -71,6 +71,11 @@ onMounted(loadDashboard)
 </template>
 
 <style scoped>
+.dashboard-page {
+  display: grid;
+  gap: 18px;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -79,10 +84,11 @@ onMounted(loadDashboard)
 
 .stat-card {
   padding: 22px;
-  min-height: 150px;
+  min-height: 160px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background: linear-gradient(180deg, rgba(11, 29, 46, 0.92), rgba(7, 18, 31, 0.94));
 }
 
 .stat-card span {
@@ -95,23 +101,22 @@ onMounted(loadDashboard)
   letter-spacing: -0.06em;
 }
 
-.stat-card.green {
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(255, 255, 255, 0.9));
+.stat-card.cyan {
+  border-color: rgba(72, 215, 255, 0.18);
 }
 
-.stat-card.gold {
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.1), rgba(255, 255, 255, 0.9));
+.stat-card.amber {
+  border-color: rgba(255, 182, 72, 0.18);
 }
 
 .stat-card.blue {
-  background: linear-gradient(180deg, rgba(21, 33, 43, 0.08), rgba(255, 255, 255, 0.9));
+  border-color: rgba(76, 111, 255, 0.18);
 }
 
 .insight-grid {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
   gap: 16px;
-  margin-top: 18px;
 }
 
 .insight-panel {
@@ -133,13 +138,13 @@ onMounted(loadDashboard)
 }
 
 .insight-tag {
-  color: var(--ink-600);
+  color: var(--primary);
   letter-spacing: 0.2em;
   font-size: 0.72rem;
 }
 
 .accent {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(255, 255, 255, 0.94));
+  background: linear-gradient(180deg, rgba(17, 39, 60, 0.96), rgba(9, 24, 39, 0.96));
 }
 
 @media (max-width: 960px) {

@@ -14,6 +14,11 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', redirect: '/dashboard' },
       { path: 'dashboard', name: 'dashboard', component: () => import('@/views/admin/Dashboard.vue') },
+      {
+        path: 'recipe-pipeline',
+        name: 'recipe-pipeline',
+        component: () => import('@/views/admin/RecipePipeline.vue'),
+      },
       { path: 'users', name: 'users', component: () => import('@/views/admin/Users.vue') },
       { path: 'favorites', name: 'favorites', component: () => import('@/views/admin/Favorites.vue') },
       { path: 'materials', name: 'materials', component: () => import('@/views/admin/Materials.vue') },

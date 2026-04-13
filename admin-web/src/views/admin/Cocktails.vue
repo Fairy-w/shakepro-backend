@@ -33,6 +33,17 @@ const form = reactive({
 })
 
 const hasMaterialOptions = computed(() => materialOptions.value.length > 0)
+const currentPageAlcoholAvg = computed(() => {
+  const values = pageData.value.content
+    .map((item) => item.alcoholLevel)
+    .filter((value): value is number => typeof value === 'number')
+
+  if (!values.length) {
+    return '--'
+  }
+
+  return (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1)
+})
 
 async function loadCocktails(nextPage = 0) {
   loading.value = true
@@ -140,33 +151,69 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section>
-    <div class="page-head">
-      <div>
-        <h1 class="page-title">鸡尾酒管理</h1>
-        <p class="page-subtitle">后台直接维护配方、步骤和材料映射，后续鸿蒙 App 就只负责消费这些数据。</p>
+  <section class="console-page">
+    <article class="hero-panel card">
+      <div class="page-head hero-head">
+        <div>
+          <p class="hero-tag">COCKTAIL LIBRARY / 成品配方展示池</p>
+          <h1 class="page-title">鸡尾酒管理</h1>
+          <p class="page-subtitle">
+            配方采集工作台产出的最终内容会汇入这里，后台可继续手动编辑、补图和维护材料映射，形成可展示的成品库。
+          </p>
+        </div>
+        <button class="button-primary" :disabled="materialsLoading || !hasMaterialOptions" @click="openCreate">
+          {{ materialsLoading ? '材料加载中...' : '新增鸡尾酒' }}
+        </button>
       </div>
-      <button class="button-primary" :disabled="materialsLoading || !hasMaterialOptions" @click="openCreate">
-        {{ materialsLoading ? '材料加载中...' : '新增鸡尾酒' }}
-      </button>
-    </div>
 
-    <div class="toolbar">
-      <input v-model="keyword" class="field search" type="text" placeholder="按名称搜索鸡尾酒" @keyup.enter="loadCocktails()" />
-      <button class="button-secondary" :disabled="loading" @click="loadCocktails()">
-        {{ loading ? '查询中...' : '查询' }}
-      </button>
-    </div>
+      <div class="metric-grid">
+        <article class="metric-card">
+          <span>总条目</span>
+          <strong>{{ pageData.totalElements }}</strong>
+          <p>支持关键词分页检索</p>
+        </article>
+        <article class="metric-card accent">
+          <span>当前页均值 ABV</span>
+          <strong>{{ currentPageAlcoholAvg }}</strong>
+          <p>按当前展示配方计算</p>
+        </article>
+        <article class="metric-card secondary">
+          <span>材料池规模</span>
+          <strong>{{ materialOptions.length }}</strong>
+          <p>新增配方前先保证材料池完整</p>
+        </article>
+      </div>
+    </article>
+
+    <article class="filter-panel card">
+      <div class="panel-headline">
+        <div>
+          <p class="panel-tag">SEARCH</p>
+          <h2>筛选鸡尾酒配方</h2>
+        </div>
+        <span class="badge">第 {{ pageData.number + 1 }} / {{ Math.max(pageData.totalPages, 1) }} 页</span>
+      </div>
+
+      <div class="toolbar">
+        <input v-model="keyword" class="field search" type="text" placeholder="按名称搜索鸡尾酒" @keyup.enter="loadCocktails()" />
+        <button class="button-secondary" :disabled="loading" @click="loadCocktails()">
+          {{ loading ? '查询中...' : '立即查询' }}
+        </button>
+      </div>
+    </article>
 
     <div class="cocktail-grid">
       <article v-for="item in pageData.content" :key="item.id" class="cocktail-card card">
         <div class="cover" :style="{ backgroundImage: item.imageUrl ? `url(${item.imageUrl})` : undefined }">
-          <span class="badge">#{{ item.id }}</span>
+          <div class="cover-overlay">
+            <span class="badge">#{{ item.id }}</span>
+            <span class="abv-chip">{{ item.alcoholLevel ?? '-' }}%</span>
+          </div>
         </div>
+
         <div class="body">
           <div class="title-row">
             <h3>{{ item.name }}</h3>
-            <span>{{ item.alcoholLevel ?? '-' }}%</span>
           </div>
           <p>创建于 {{ item.createdAt?.replace('T', ' ') || '-' }}</p>
           <div class="actions">
@@ -175,13 +222,15 @@ onMounted(async () => {
           </div>
         </div>
       </article>
+
       <article v-if="!pageData.content.length" class="cocktail-card card empty-card">
-        <h3>暂无鸡尾酒数据</h3>
-        <p>先新增内容，后台和鸿蒙端的数据闭环就能跑起来。</p>
+        <p class="hero-tag">EMPTY</p>
+        <h3>当前筛选下暂无鸡尾酒</h3>
+        <p>可以先从配方采集工作台发布候选，再回到这里做成品库展示。</p>
       </article>
     </div>
 
-    <div class="pager">
+    <div class="pager card">
       <button class="button-secondary" :disabled="pageData.number <= 0 || loading" @click="loadCocktails(pageData.number - 1)">上一页</button>
       <span>第 {{ pageData.number + 1 }} / {{ Math.max(pageData.totalPages, 1) }} 页</span>
       <button
@@ -195,11 +244,12 @@ onMounted(async () => {
 
     <div v-if="showModal" class="modal-backdrop" @click.self="showModal = false">
       <div class="modal-panel cocktail-modal">
-        <div class="page-head compact">
+        <div class="panel-headline compact">
           <div>
-            <h2 class="page-title">{{ editingId ? '编辑鸡尾酒' : '新增鸡尾酒' }}</h2>
-            <p class="page-subtitle">建议把步骤写成多行文本，后台维护会更清晰。</p>
+            <p class="panel-tag">{{ editingId ? 'EDIT COCKTAIL' : 'CREATE COCKTAIL' }}</p>
+            <h2>{{ editingId ? '编辑鸡尾酒' : '新增鸡尾酒' }}</h2>
           </div>
+          <span class="badge">建议步骤写成多行文本</span>
         </div>
 
         <div class="form-grid">
@@ -227,7 +277,10 @@ onMounted(async () => {
 
         <div class="material-editor">
           <div class="material-head">
-            <h3>材料明细</h3>
+            <div>
+              <p class="panel-tag">MATERIAL MAPPING</p>
+              <h3>材料明细</h3>
+            </div>
             <button class="button-secondary" type="button" @click="addMaterialRow">添加一行</button>
           </div>
 
@@ -253,8 +306,95 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.console-page {
+  display: grid;
+  gap: 18px;
+}
+
+.hero-panel,
+.filter-panel,
+.pager {
+  padding: 22px;
+}
+
+.hero-panel {
+  background:
+    radial-gradient(circle at top right, rgba(72, 215, 255, 0.16), transparent 30%),
+    linear-gradient(180deg, rgba(11, 29, 46, 0.96), rgba(7, 18, 31, 0.98));
+}
+
+.hero-head {
+  margin-bottom: 18px;
+}
+
+.hero-tag,
+.panel-tag {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  color: var(--primary);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-card {
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(8, 22, 36, 0.8);
+  border: 1px solid rgba(72, 215, 255, 0.12);
+}
+
+.metric-card span,
+.metric-card p,
+.body p {
+  color: var(--ink-600);
+}
+
+.metric-card strong {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 2.1rem;
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.metric-card p,
+.body p {
+  margin: 0;
+}
+
+.metric-card.accent {
+  border-color: rgba(255, 182, 72, 0.16);
+}
+
+.metric-card.secondary {
+  border-color: rgba(76, 111, 255, 0.2);
+}
+
+.panel-headline {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.panel-headline.compact {
+  margin-bottom: 20px;
+}
+
+.panel-headline h2 {
+  margin: 0;
+  font-size: 1.28rem;
+  letter-spacing: -0.04em;
+}
+
 .search {
-  max-width: 320px;
+  max-width: 360px;
 }
 
 .cocktail-grid {
@@ -265,39 +405,52 @@ onMounted(async () => {
 
 .cocktail-card {
   overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(72, 215, 255, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(10, 27, 43, 0.92), rgba(7, 18, 31, 0.96));
 }
 
 .cover {
-  min-height: 180px;
+  min-height: 220px;
   padding: 18px;
   background:
-    linear-gradient(135deg, rgba(15, 118, 110, 0.4), rgba(21, 33, 43, 0.5)),
-    linear-gradient(135deg, rgba(245, 158, 11, 0.24), transparent);
+    linear-gradient(135deg, rgba(8, 22, 36, 0.2), rgba(8, 22, 36, 0.78)),
+    linear-gradient(135deg, rgba(72, 215, 255, 0.24), rgba(76, 111, 255, 0.16));
   background-size: cover;
   background-position: center;
   display: flex;
   align-items: flex-start;
 }
 
-.body {
-  padding: 18px;
-}
-
-.title-row {
+.cover-overlay {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  align-items: flex-start;
+}
+
+.abv-chip {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 182, 72, 0.14);
+  color: #ffd79a;
+  font-weight: 700;
+}
+
+.body {
+  padding: 18px;
+  display: grid;
+  gap: 16px;
 }
 
 .title-row h3 {
-  font-size: 1.35rem;
+  margin: 0;
+  font-size: 1.42rem;
   letter-spacing: -0.04em;
-}
-
-.body p {
-  margin: 10px 0 18px;
-  color: var(--ink-600);
 }
 
 .actions,
@@ -307,16 +460,19 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
+.empty-card {
+  align-content: center;
+}
+
 .pager {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  margin-top: 18px;
 }
 
 .cocktail-modal {
-  width: min(920px, 100%);
+  width: min(980px, 100%);
 }
 
 .form-grid {
@@ -328,6 +484,7 @@ onMounted(async () => {
 .form-grid label {
   display: grid;
   gap: 8px;
+  color: var(--ink-800);
 }
 
 .span-two {
@@ -336,7 +493,7 @@ onMounted(async () => {
 
 .material-editor {
   margin-top: 22px;
-  padding-top: 20px;
+  padding-top: 22px;
   border-top: 1px solid var(--line);
 }
 
@@ -344,8 +501,13 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 14px;
+}
+
+.material-head h3 {
+  margin: 0;
+  font-size: 1.18rem;
 }
 
 .material-row {
@@ -359,15 +521,8 @@ onMounted(async () => {
   padding-inline: 14px;
 }
 
-.empty-card {
-  padding: 22px;
-}
-
-.compact {
-  margin-bottom: 18px;
-}
-
 @media (max-width: 960px) {
+  .metric-grid,
   .cocktail-grid,
   .form-grid,
   .material-row {
@@ -377,7 +532,16 @@ onMounted(async () => {
   .span-two {
     grid-column: auto;
   }
+}
 
+@media (max-width: 720px) {
+  .hero-panel,
+  .filter-panel,
+  .pager {
+    padding: 18px;
+  }
+
+  .panel-headline,
   .pager,
   .material-head {
     flex-direction: column;

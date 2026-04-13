@@ -8,8 +8,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface CocktailRepository extends JpaRepository<Cocktail, Long> {
+
+    Optional<Cocktail> findByNameIgnoreCase(String name);
 
     Page<Cocktail> findByNameContainingIgnoreCase(String keyword, Pageable pageable);
 
