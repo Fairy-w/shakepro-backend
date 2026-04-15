@@ -18,6 +18,14 @@ const totalMaterials = computed(() =>
   pageData.value.content.reduce((sum, item) => sum + item.materials.length, 0)
 )
 
+function formatSource(source?: string | null) {
+  if (!source || source.toLowerCase() === 'ai') {
+    return 'AI 生成'
+  }
+
+  return source
+}
+
 async function loadFavorites(nextPage = 0) {
   loading.value = true
   try {
@@ -32,7 +40,7 @@ async function loadFavorites(nextPage = 0) {
 }
 
 async function removeFavorite(item: AdminAiFavorite) {
-  const confirmed = window.confirm(`确认删除收藏「${item.name}」吗？删除后该记录将从后台移除。`)
+  const confirmed = window.confirm(`确认删除收藏「${item.name}」吗？删除后这条记录会从列表中移除。`)
   if (!confirmed) {
     return
   }
@@ -58,9 +66,7 @@ onMounted(() => loadFavorites())
     <div class="page-head">
       <div>
         <h1 class="page-title">收藏管理</h1>
-        <p class="page-subtitle">
-          当前页面聚焦 AI 调酒配方收藏。管理员可以搜索用户或配方，查看完整内容，并删除不需要保留的收藏记录。
-        </p>
+        <p class="page-subtitle">集中查看 AI 调酒配方收藏，按用户或配方检索内容，必要时快速清理不再需要的记录。</p>
       </div>
       <div class="head-stats">
         <span class="badge">收藏 {{ pageData.totalElements }} 条</span>
@@ -73,10 +79,10 @@ onMounted(() => loadFavorites())
         v-model="keyword"
         class="field search"
         type="text"
-        placeholder="搜索用户名、配方名、描述、prompt"
+        placeholder="搜索用户、配方名或生成要求"
         @keyup.enter="loadFavorites()"
       />
-      <button class="button-primary" :disabled="loading" @click="loadFavorites()">{{ loading ? '查询中...' : '查询' }}</button>
+      <button class="button-primary" :disabled="loading" @click="loadFavorites()">{{ loading ? '查询中...' : '搜索' }}</button>
     </div>
 
     <div class="card table-card">
@@ -114,7 +120,7 @@ onMounted(() => loadFavorites())
                 <code>{{ item.recipeKey }}</code>
               </div>
             </td>
-            <td><span class="source-chip">{{ item.source || 'ai' }}</span></td>
+            <td><span class="source-chip">{{ formatSource(item.source) }}</span></td>
             <td>{{ item.createdAt?.replace('T', ' ') || '-' }}</td>
             <td>
               <div class="actions">
@@ -126,7 +132,7 @@ onMounted(() => loadFavorites())
             </td>
           </tr>
           <tr v-if="!pageData.content.length">
-            <td colspan="7" class="empty">暂无收藏记录</td>
+            <td colspan="7" class="empty">暂时还没有匹配的收藏记录</td>
           </tr>
         </tbody>
       </table>
@@ -148,7 +154,7 @@ onMounted(() => loadFavorites())
       <div class="modal-panel detail-panel">
         <div class="detail-head">
           <div>
-            <p class="detail-tag">AI FAVORITE</p>
+            <p class="detail-tag">收藏详情</p>
             <h2>{{ selectedFavorite.name }}</h2>
             <p class="detail-desc">{{ selectedFavorite.description || '暂无风味描述' }}</p>
           </div>
@@ -162,15 +168,15 @@ onMounted(() => loadFavorites())
               <li><strong>收藏 ID：</strong>{{ selectedFavorite.id }}</li>
               <li><strong>用户：</strong>{{ selectedFavorite.nickname || selectedFavorite.username || selectedFavorite.userId }}</li>
               <li><strong>用户名：</strong>{{ selectedFavorite.username || '-' }}</li>
-              <li><strong>来源：</strong>{{ selectedFavorite.source || 'ai' }}</li>
+              <li><strong>来源：</strong>{{ formatSource(selectedFavorite.source) }}</li>
               <li><strong>收藏时间：</strong>{{ selectedFavorite.createdAt?.replace('T', ' ') || '-' }}</li>
             </ul>
           </article>
 
           <article class="detail-card">
-            <h3>生成需求</h3>
-            <p class="prompt-card">{{ selectedFavorite.prompt || '暂无 prompt' }}</p>
-            <p class="hash-text"><strong>recipeKey：</strong>{{ selectedFavorite.recipeKey }}</p>
+            <h3>生成要求</h3>
+            <p class="prompt-card">{{ selectedFavorite.prompt || '暂无生成要求' }}</p>
+            <p class="hash-text"><strong>配方标识：</strong>{{ selectedFavorite.recipeKey }}</p>
           </article>
         </div>
 
@@ -212,6 +218,7 @@ onMounted(() => loadFavorites())
 
 .table-card {
   overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(242, 247, 250, 0.66));
 }
 
 th,
@@ -223,9 +230,22 @@ td {
 }
 
 th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   font-size: 0.84rem;
   letter-spacing: 0.08em;
   color: var(--ink-600);
+  background: rgba(241, 247, 250, 0.96);
+  backdrop-filter: blur(16px);
+}
+
+tbody tr {
+  transition: background 0.2s ease;
+}
+
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.46);
 }
 
 .user-cell,
@@ -250,7 +270,7 @@ th {
   display: inline-block;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(21, 33, 43, 0.06);
+  background: rgba(16, 32, 46, 0.06);
   color: var(--ink-600);
   font-size: 0.78rem;
   word-break: break-all;
@@ -323,7 +343,14 @@ th {
 .detail-card {
   padding: 20px;
   border-radius: 22px;
-  background: rgba(246, 245, 239, 0.9);
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.detail-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(16, 32, 46, 0.08);
 }
 
 .detail-card h3 {
@@ -342,7 +369,7 @@ th {
   margin: 0;
   padding: 16px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.74);
   color: var(--ink-800);
 }
 
@@ -355,6 +382,11 @@ th {
 @media (max-width: 1100px) {
   .table-card {
     overflow-x: auto;
+  }
+
+  th {
+    top: auto;
+    position: static;
   }
 }
 

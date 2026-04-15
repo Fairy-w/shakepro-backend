@@ -6,13 +6,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shakepro.common.exception.BusinessException;
 import com.shakepro.common.result.ErrorCode;
 import com.shakepro.config.AiConfig;
-import com.shakepro.config.AiQwenConfig;
 import com.shakepro.dto.request.AiGenerateRecipeByTextRequest;
 import com.shakepro.dto.request.AiGenerateRecipeRequest;
 import com.shakepro.dto.request.AiRecommendRequest;
 import com.shakepro.dto.response.AiGenerateRecipeResponse;
 import com.shakepro.dto.response.AiRecommendResponse;
 import com.shakepro.service.AiService;
+import com.shakepro.service.support.QwenJsonCompletionClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,9 +32,9 @@ import java.util.Map;
 public class AiServiceImpl implements AiService {
 
     private final AiConfig aiConfig;
-    private final AiQwenConfig aiQwenConfig;
     private final HttpClient aiHttpClient;
     private final ObjectMapper objectMapper;
+    private final QwenJsonCompletionClient qwenJsonCompletionClient;
 
     @Override
     public List<AiRecommendResponse> recommend(AiRecommendRequest request) {
@@ -126,47 +126,11 @@ public class AiServiceImpl implements AiService {
     private List<AiGenerateRecipeResponse> callDashScopeGenerateRecipe(AiGenerateRecipeRequest request) {
         try {
             String prompt = buildGeneratePrompt(request);
-
-            Map<String, Object> body = Map.of(
-                    "model", aiQwenConfig.getModel(),
-                    "input", Map.of(
-                            "messages", List.of(
-                                    Map.of("role", "system", "content",
-                                            "你是一个专业的鸡尾酒调酒师。根据用户提供的材料生成鸡尾酒配方。" +
-                                                    "请严格返回JSON数组格式，每个对象包含name、description、materials(数组)、steps字段。"),
-                                    Map.of("role", "user", "content", prompt)
-                            )
-                    ),
-                    "parameters", Map.of(
-                            "temperature", 0.7,
-                            "result_format", "message"
-                    )
+            String content = qwenJsonCompletionClient.completeJson(
+                    "你是一个专业的鸡尾酒调酒师。根据用户提供的材料生成鸡尾酒配方。" +
+                            "请严格返回JSON数组格式，每个对象包含name、description、materials(数组)、steps字段。",
+                    prompt
             );
-
-            String jsonBody = objectMapper.writeValueAsString(body);
-            log.info("Calling DashScope API for recipe generation, model={}", aiQwenConfig.getModel());
-
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(aiQwenConfig.getBaseUrl() + "/services/aigc/text-generation/generation"))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + aiQwenConfig.getApiKey())
-                    .timeout(Duration.ofMillis(aiQwenConfig.getTimeoutMs()))
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                    .build();
-
-            HttpResponse<String> response = aiHttpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() != 200) {
-                log.error("DashScope API error: status={}, body={}", response.statusCode(), response.body());
-                throw new BusinessException(ErrorCode.AI_ERROR, "AI服务返回异常: " + response.statusCode());
-            }
-
-            JsonNode root = objectMapper.readTree(response.body());
-            String content = extractDashScopeContent(root);
-            if (content == null || content.isBlank()) {
-                throw new BusinessException(ErrorCode.AI_ERROR, "AI返回内容为空");
-            }
-
             return objectMapper.readValue(content, new TypeReference<List<AiGenerateRecipeResponse>>() {});
         } catch (BusinessException e) {
             throw e;
@@ -179,47 +143,11 @@ public class AiServiceImpl implements AiService {
     private List<AiGenerateRecipeResponse> callDashScopeGenerateRecipeByText(AiGenerateRecipeByTextRequest request) {
         try {
             String prompt = buildGeneratePromptByText(request);
-
-            Map<String, Object> body = Map.of(
-                    "model", aiQwenConfig.getModel(),
-                    "input", Map.of(
-                            "messages", List.of(
-                                    Map.of("role", "system", "content",
-                                            "你是一个专业的鸡尾酒调酒师。请根据用户自然语言描述生成可执行的鸡尾酒配方。" +
-                                                    "请严格返回JSON数组格式，每个对象包含name、description、materials(数组)、steps字段。"),
-                                    Map.of("role", "user", "content", prompt)
-                            )
-                    ),
-                    "parameters", Map.of(
-                            "temperature", 0.7,
-                            "result_format", "message"
-                    )
+            String content = qwenJsonCompletionClient.completeJson(
+                    "你是一个专业的鸡尾酒调酒师。请根据用户自然语言描述生成可执行的鸡尾酒配方。" +
+                            "请严格返回JSON数组格式，每个对象包含name、description、materials(数组)、steps字段。",
+                    prompt
             );
-
-            String jsonBody = objectMapper.writeValueAsString(body);
-            log.info("Calling DashScope API for text-to-recipe generation, model={}", aiQwenConfig.getModel());
-
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(aiQwenConfig.getBaseUrl() + "/services/aigc/text-generation/generation"))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + aiQwenConfig.getApiKey())
-                    .timeout(Duration.ofMillis(aiQwenConfig.getTimeoutMs()))
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                    .build();
-
-            HttpResponse<String> response = aiHttpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() != 200) {
-                log.error("DashScope API error: status={}, body={}", response.statusCode(), response.body());
-                throw new BusinessException(ErrorCode.AI_ERROR, "AI服务返回异常: " + response.statusCode());
-            }
-
-            JsonNode root = objectMapper.readTree(response.body());
-            String content = extractDashScopeContent(root);
-            if (content == null || content.isBlank()) {
-                throw new BusinessException(ErrorCode.AI_ERROR, "AI返回内容为空");
-            }
-
             return objectMapper.readValue(content, new TypeReference<List<AiGenerateRecipeResponse>>() {});
         } catch (BusinessException e) {
             throw e;
@@ -227,19 +155,6 @@ public class AiServiceImpl implements AiService {
             log.error("AI text-to-recipe generation failed: {}", e.getMessage(), e);
             throw new BusinessException(ErrorCode.AI_ERROR, "AI自然语言配方生成失败: " + e.getMessage());
         }
-    }
-
-    private String extractDashScopeContent(JsonNode root) {
-        String fromMessage = root.path("output")
-                .path("choices")
-                .path(0)
-                .path("message")
-                .path("content")
-                .asText(null);
-        if (fromMessage != null && !fromMessage.isBlank()) {
-            return fromMessage;
-        }
-        return root.path("output").path("text").asText(null);
     }
 
     private String buildPrompt(AiRecommendRequest request) {

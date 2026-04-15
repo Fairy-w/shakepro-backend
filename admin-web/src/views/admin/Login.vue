@@ -8,15 +8,15 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const form = ref({
-  username: 'admin',
-  password: 'admin123456',
+  username: '',
+  password: '',
 })
 const loading = ref(false)
 const error = ref('')
 
 async function submit() {
   if (!form.value.username || !form.value.password) {
-    error.value = '请输入管理员账号和密码'
+    error.value = '请输入账号和密码'
     return
   }
 
@@ -38,41 +38,39 @@ async function submit() {
 <template>
   <div class="login-page">
     <section class="login-brand">
-      <p class="eyebrow">SHAKEPRO ADMIN CONSOLE</p>
-      <h1>把鸡尾酒内容、用户和素材都收进一个控制台。</h1>
-      <p class="intro">
-        现在这套 Web 已经切成后台管理端，鸿蒙 App 负责 C 端体验，这里专注数据治理和内容运营。
-      </p>
+      <p class="eyebrow">SHAKEPRO LOUNGE</p>
+      <h1>把酒单、材料和收藏整理成一块清爽的玻璃面板。</h1>
+      <p class="intro">进入工作台后，你可以统一查看成员数据、维护配方内容，并快速处理用户收藏。</p>
       <div class="brand-grid">
         <article class="brand-card">
           <span>01</span>
-          <strong>仪表盘</strong>
-          <p>快速看用户、鸡尾酒、材料、收藏和文件规模。</p>
+          <strong>经营概览</strong>
+          <p>快速掌握用户、酒单、材料和收藏的当前规模。</p>
         </article>
         <article class="brand-card">
           <span>02</span>
-          <strong>内容维护</strong>
-          <p>直接管理鸡尾酒配方与材料库，避免前后台数据割裂。</p>
+          <strong>酒单维护</strong>
+          <p>直接更新配方、步骤、图片与酒精度，让展示保持一致。</p>
         </article>
         <article class="brand-card">
           <span>03</span>
-          <strong>可继续扩展</strong>
-          <p>后续可继续接操作日志、Banner 管理和 AI 调用记录。</p>
+          <strong>收藏回看</strong>
+          <p>查看用户保存的调酒灵感，及时整理或清理不需要的内容。</p>
         </article>
       </div>
     </section>
 
     <section class="login-panel card">
       <div class="panel-head">
-        <p class="eyebrow darker">ADMIN LOGIN</p>
-        <h2>管理员登录</h2>
-        <p>默认已预置管理员账号，可直接登录后开始管理。</p>
+        <p class="eyebrow darker">欢迎登录</p>
+        <h2>进入酒饮工作台</h2>
+        <p>使用你的管理账号登录后，就可以开始整理内容。</p>
       </div>
 
       <form class="login-form" @submit.prevent="submit">
         <label>
           <span>账号</span>
-          <input v-model="form.username" class="field" type="text" autocomplete="username" placeholder="admin" />
+          <input v-model="form.username" class="field" type="text" autocomplete="username" placeholder="输入账号" />
         </label>
 
         <label>
@@ -82,14 +80,14 @@ async function submit() {
             class="field"
             type="password"
             autocomplete="current-password"
-            placeholder="输入管理员密码"
+            placeholder="输入密码"
           />
         </label>
 
         <p v-if="error" class="error-text">{{ error }}</p>
 
         <button class="button-primary submit-button" type="submit" :disabled="loading">
-          {{ loading ? '登录中...' : '进入后台' }}
+          {{ loading ? '登录中...' : '进入工作台' }}
         </button>
       </form>
     </section>
@@ -107,10 +105,11 @@ async function submit() {
 
 .login-brand {
   padding: 34px;
-  border-radius: 32px;
+  border-radius: 34px;
   background:
-    linear-gradient(135deg, rgba(15, 118, 110, 0.92), rgba(21, 33, 43, 0.92)),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent);
+    linear-gradient(135deg, rgba(11, 93, 87, 0.84), rgba(15, 23, 42, 0.72)),
+    radial-gradient(circle at top right, rgba(125, 211, 252, 0.32), transparent 30%),
+    radial-gradient(circle at 10% 100%, rgba(245, 158, 11, 0.24), transparent 26%);
   color: white;
   box-shadow: var(--shadow-lg);
   display: flex;
@@ -123,12 +122,12 @@ async function submit() {
 .login-brand::after {
   content: '';
   position: absolute;
-  width: 280px;
-  height: 280px;
+  width: 320px;
+  height: 320px;
   border-radius: 50%;
-  right: -70px;
-  top: -90px;
-  background: rgba(245, 158, 11, 0.26);
+  right: -80px;
+  top: -120px;
+  background: rgba(255, 255, 255, 0.2);
   filter: blur(10px);
 }
 
@@ -136,6 +135,7 @@ async function submit() {
   letter-spacing: 0.28em;
   font-size: 0.72rem;
   opacity: 0.82;
+  margin: 0;
 }
 
 .darker {
@@ -143,18 +143,18 @@ async function submit() {
 }
 
 .login-brand h1 {
-  font-size: clamp(2.4rem, 4vw, 4.6rem);
+  font-size: clamp(2.5rem, 4vw, 4.8rem);
   line-height: 0.95;
   letter-spacing: -0.05em;
-  margin-top: 18px;
+  margin: 18px 0 0;
   max-width: 720px;
 }
 
 .intro {
   margin-top: 18px;
   font-size: 1.04rem;
-  max-width: 580px;
-  color: rgba(255, 255, 255, 0.8);
+  max-width: 560px;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .brand-grid {
@@ -166,9 +166,10 @@ async function submit() {
 
 .brand-card {
   padding: 18px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(8px);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .brand-card span {
@@ -191,13 +192,13 @@ async function submit() {
 
 .brand-card p,
 .panel-head p {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .login-panel {
   align-self: center;
-  padding: 28px;
-  background: rgba(255, 253, 248, 0.95);
+  padding: 30px;
+  background: linear-gradient(180deg, rgba(253, 255, 255, 0.88), rgba(240, 246, 250, 0.76));
 }
 
 .panel-head h2 {
@@ -231,6 +232,7 @@ async function submit() {
 .error-text {
   color: var(--danger);
   font-weight: 600;
+  margin: 0;
 }
 
 @media (max-width: 1040px) {

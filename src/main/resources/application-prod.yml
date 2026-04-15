@@ -35,12 +35,12 @@ ai:
   base-url: ${AI_BASE_URL}
   api-key: ${AI_API_KEY}
   model: ${AI_MODEL}
-  timeout-ms: ${AI_TIMEOUT:15000}
+  timeout-ms: ${AI_TIMEOUT:45000}
   qwen:
     base-url: ${QWEN_BASE_URL:https://dashscope.aliyuncs.com/api/v1}
     api-key: ${QWEN_API_KEY}
     model: ${QWEN_MODEL:qwen-plus}
-    timeout-ms: ${QWEN_TIMEOUT:15000}
+    timeout-ms: ${QWEN_TIMEOUT:45000}
 
 logging:
   level:

@@ -33,14 +33,14 @@ onMounted(() => loadUsers())
     <div class="page-head">
       <div>
         <h1 class="page-title">用户管理</h1>
-        <p class="page-subtitle">这里先提供后台最常用的用户查看能力，方便你掌握注册情况、角色情况和用户创建时间。</p>
+        <p class="page-subtitle">查看账号信息、角色状态与创建时间，快速核对成员结构和账号启用情况。</p>
       </div>
-      <span class="badge">共 {{ pageData.totalElements }} 位用户</span>
+      <span class="badge">已收录 {{ pageData.totalElements }} 位用户</span>
     </div>
 
     <div class="toolbar">
       <input v-model="keyword" class="field search" type="text" placeholder="按用户名或昵称搜索" @keyup.enter="loadUsers()" />
-      <button class="button-primary" :disabled="loading" @click="loadUsers()">{{ loading ? '查询中...' : '查询' }}</button>
+      <button class="button-primary" :disabled="loading" @click="loadUsers()">{{ loading ? '查询中...' : '搜索' }}</button>
     </div>
 
     <div class="card table-card">
@@ -69,7 +69,7 @@ onMounted(() => loadUsers())
             <td>{{ user.createdAt?.replace('T', ' ') || '-' }}</td>
           </tr>
           <tr v-if="!pageData.content.length">
-            <td colspan="6" class="empty">暂无用户数据</td>
+            <td colspan="6" class="empty">暂时还没有匹配的用户</td>
           </tr>
         </tbody>
       </table>
@@ -96,6 +96,7 @@ onMounted(() => loadUsers())
 
 .table-card {
   overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(243, 248, 251, 0.68));
 }
 
 th,
@@ -106,9 +107,22 @@ td {
 }
 
 th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   font-size: 0.86rem;
   letter-spacing: 0.1em;
   color: var(--ink-600);
+  background: rgba(241, 247, 250, 0.96);
+  backdrop-filter: blur(16px);
+}
+
+tbody tr {
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.48);
 }
 
 .status {
@@ -145,6 +159,11 @@ th {
 
   .pager {
     flex-direction: column;
+  }
+
+  th {
+    top: auto;
+    position: static;
   }
 }
 </style>

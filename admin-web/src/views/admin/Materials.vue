@@ -76,9 +76,9 @@ onMounted(loadMaterials)
     <div class="page-head">
       <div>
         <h1 class="page-title">材料管理</h1>
-        <p class="page-subtitle">维护基础材料池，保证鸡尾酒配方编辑时可复用、可检索、可规范命名。</p>
+        <p class="page-subtitle">维护基础材料库，让新增配方时能直接复用统一的名称和分类。</p>
       </div>
-      <button class="button-primary" @click="openCreate">新增材料</button>
+      <button class="button-primary" @click="openCreate">新建材料</button>
     </div>
 
     <div class="toolbar">
@@ -105,8 +105,8 @@ onMounted(loadMaterials)
         </div>
       </article>
       <article v-if="!materials.length" class="material-card card empty-card">
-        <h3>暂无材料</h3>
-        <p>可以先新增几个基础材料，再去维护鸡尾酒配方。</p>
+        <h3>还没有材料内容</h3>
+        <p>先补充几种常用基酒、果汁或糖浆，后面录入配方会更顺手。</p>
       </article>
     </div>
 
@@ -114,8 +114,8 @@ onMounted(loadMaterials)
       <div class="modal-panel">
         <div class="page-head compact">
           <div>
-            <h2 class="page-title">{{ editingId ? '编辑材料' : '新增材料' }}</h2>
-            <p class="page-subtitle">材料名称建议统一中文或中英混排格式，便于运营维护。</p>
+            <h2 class="page-title">{{ editingId ? '编辑材料' : '新建材料' }}</h2>
+            <p class="page-subtitle">名称和分类越统一，后续筛选、录入和复用就越轻松。</p>
           </div>
         </div>
 
@@ -126,7 +126,7 @@ onMounted(loadMaterials)
           </label>
           <label>
             <span>分类</span>
-            <input v-model="form.category" class="field" type="text" placeholder="例如：spirit / juice / syrup" />
+            <input v-model="form.category" class="field" type="text" placeholder="例如：基酒 / 果汁 / 糖浆" />
           </label>
         </div>
 
@@ -156,6 +156,13 @@ onMounted(loadMaterials)
   flex-direction: column;
   justify-content: space-between;
   gap: 18px;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+.material-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 50px rgba(16, 32, 46, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(240, 246, 250, 0.72));
 }
 
 .material-card h3 {

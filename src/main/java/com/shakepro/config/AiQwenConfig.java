@@ -12,5 +12,5 @@ public class AiQwenConfig {
     private String baseUrl = "https://dashscope.aliyuncs.com/api/v1";
     private String apiKey;
     private String model = "qwen-plus";
-    private int timeoutMs = 15000;
+    private int timeoutMs = 45000;
 }

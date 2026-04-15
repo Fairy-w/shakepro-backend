@@ -79,6 +79,58 @@ export interface AdminAiFavorite {
   updatedAt: string
 }
 
+export interface AdminPageTextResult {
+  url: string
+  title: string
+  html: string
+}
+
+export interface ExtractedIngredientItem {
+  name?: string | null
+  amount?: string | null
+  note?: string | null
+}
+
+export interface ExtractedStepItem {
+  title?: string | null
+  detail?: string | null
+}
+
+export interface FieldSource {
+  mode?: string | null
+  source?: string | null
+  note?: string | null
+}
+
+export interface AdminExtractedFieldsResult {
+  url: string
+  title?: string | null
+  extractMode?: string | null
+  generateMode?: string | null
+  name?: string | null
+  englishName?: string | null
+  category?: string | null
+  heroImage?: string | null
+  difficulty?: string | null
+  abv?: string | null
+  glass?: string | null
+  garnish?: string | null
+  highlight?: string | null
+  subtitle?: string | null
+  description?: string | null
+  story?: string | null
+  flavorTags: string[]
+  flavorMetrics: Record<string, number>
+  pairings: string[]
+  serviceNotes: string[]
+  ingredients: ExtractedIngredientItem[]
+  steps: ExtractedStepItem[]
+  fieldSources: Record<string, FieldSource>
+  missingFields: string[]
+}
+
+const AI_GENERATE_TIMEOUT_MS = 60000
+
 export interface MaterialPayload {
   name: string
   category?: string
@@ -108,6 +160,15 @@ export const adminApi = {
   },
   deleteAiFavorite(id: number) {
     return http.delete(`/admin/favorites/ai-cocktails/${id}`) as Promise<void>
+  },
+  crawlPageText(data: { url: string }) {
+    return http.post('/admin/crawl/page-text', data) as Promise<AdminPageTextResult>
+  },
+  extractPageFields(data: { url: string; title?: string; html: string }) {
+    return http.post('/admin/crawl/extract-fields', data) as Promise<AdminExtractedFieldsResult>
+  },
+  generatePageFields(data: AdminExtractedFieldsResult) {
+    return http.post('/admin/crawl/generate-fields', data, { timeout: AI_GENERATE_TIMEOUT_MS }) as Promise<AdminExtractedFieldsResult>
   },
   getMaterials(params?: { keyword?: string; category?: string }) {
     return http.get('/admin/materials', { params }) as Promise<AdminMaterial[]>

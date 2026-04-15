@@ -43,9 +43,9 @@ ai:
   base-url: ${AI_BASE_URL:https://api.openai.com/v1}
   api-key: ${AI_API_KEY:sk-mock-key}
   model: ${AI_MODEL:gpt-3.5-turbo}
-  timeout-ms: ${AI_TIMEOUT:15000}
+  timeout-ms: ${AI_TIMEOUT:45000}
   qwen:
     base-url: ${QWEN_BASE_URL:https://dashscope.aliyuncs.com/api/v1}
     api-key: ${QWEN_API_KEY:${AI_API_KEY:sk-mock-key}}
     model: ${QWEN_MODEL:qwen-plus}
-    timeout-ms: ${QWEN_TIMEOUT:15000}
+    timeout-ms: ${QWEN_TIMEOUT:45000}

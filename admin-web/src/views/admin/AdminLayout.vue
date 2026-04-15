@@ -8,14 +8,28 @@ const route = useRoute()
 const router = useRouter()
 
 const navItems = [
-  { label: '仪表盘', to: '/dashboard' },
-  { label: '用户管理', to: '/users' },
-  { label: '收藏管理', to: '/favorites' },
-  { label: '材料管理', to: '/materials' },
-  { label: '鸡尾酒管理', to: '/cocktails' },
+  { label: '概览', to: '/dashboard' },
+  { label: '用户', to: '/users' },
+  { label: '收藏', to: '/favorites' },
+  { label: '材料', to: '/materials' },
+  { label: '鸡尾酒', to: '/cocktails' },
+  { label: '网页抓取', to: '/crawler' },
 ]
 
-const currentLabel = computed(() => navItems.find((item) => route.path.startsWith(item.to))?.label || '后台管理')
+const currentLabel = computed(() => navItems.find((item) => route.path.startsWith(item.to))?.label || '概览')
+const roleLabel = computed(() => {
+  const role = authStore.user?.role
+
+  if (role === 'SUPER_ADMIN') {
+    return '超级管理员'
+  }
+
+  if (role === 'ADMIN') {
+    return '系统管理员'
+  }
+
+  return role || '管理账号'
+})
 
 onMounted(() => {
   if (!authStore.user) {
@@ -32,28 +46,31 @@ function logout() {
 <template>
   <div class="admin-shell layout-grid">
     <aside class="sidebar card">
-      <div>
-        <p class="sidebar-tag">ShakePro</p>
-        <h1>Admin Console</h1>
-        <p class="sidebar-copy">运营、配方、收藏、用户和素材统一维护。</p>
-      </div>
+      <div class="sidebar-main">
+        <div class="brand-block">
+          <p class="sidebar-tag">ShakePro Lounge</p>
+          <h1>酒饮工作台</h1>
+          <p class="sidebar-copy">把酒单、材料、收藏和成员信息放在同一块玻璃面板里，切换页面也始终稳稳停在手边。</p>
+        </div>
 
-      <nav class="nav-list">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="nav-link"
-          :class="{ active: route.path.startsWith(item.to) }"
-        >
-          {{ item.label }}
-        </RouterLink>
-      </nav>
+        <nav class="nav-list">
+          <RouterLink
+            v-for="item in navItems"
+            :key="item.to"
+            :to="item.to"
+            class="nav-link"
+            :class="{ active: route.path.startsWith(item.to) }"
+          >
+            {{ item.label }}
+          </RouterLink>
+        </nav>
+      </div>
 
       <div class="sidebar-foot">
         <div class="profile-badge">
-          <strong>{{ authStore.nickname || '管理员' }}</strong>
-          <span>{{ authStore.user?.role || 'ADMIN' }}</span>
+          <span class="profile-label">当前账号</span>
+          <strong>{{ authStore.nickname || '管理账号' }}</strong>
+          <span>{{ roleLabel }}</span>
         </div>
         <button class="button-secondary" @click="logout">退出登录</button>
       </div>
@@ -62,12 +79,13 @@ function logout() {
     <main class="main-panel">
       <header class="topbar card">
         <div>
-          <p class="topbar-tag">CONTROL PANEL</p>
+          <p class="topbar-tag">欢迎回来</p>
           <h2>{{ currentLabel }}</h2>
+          <p class="topbar-copy">查看数据、整理内容、更新酒单，都从这里开始。</p>
         </div>
         <div class="topbar-meta">
-          <span class="badge">后台管理端</span>
-          <span class="badge subtle">鸿蒙 App 负责 C 端</span>
+          <span class="badge">内容与数据一站管理</span>
+          <span class="badge subtle">左侧导航切换时保持固定位置</span>
         </div>
       </header>
 
@@ -81,90 +99,115 @@ function logout() {
 <style scoped>
 .layout-grid {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 18px;
-  padding: 18px;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+  padding: 20px;
+  width: 100%;
 }
 
 .sidebar {
-  min-height: calc(100vh - 36px);
+  position: sticky;
+  top: 20px;
+  align-self: start;
+  min-height: calc(100vh - 40px);
   padding: 24px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 246, 245, 0.9)),
-    radial-gradient(circle at top right, rgba(15, 118, 110, 0.1), transparent 42%);
+    linear-gradient(180deg, rgba(252, 255, 255, 0.78), rgba(236, 244, 248, 0.62)),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.14), transparent 34%),
+    radial-gradient(circle at 0% 100%, rgba(245, 158, 11, 0.12), transparent 30%);
+}
+
+.sidebar-main {
+  display: grid;
+  gap: 28px;
 }
 
 .sidebar-tag,
 .topbar-tag {
+  margin: 0;
   letter-spacing: 0.22em;
   font-size: 0.74rem;
   color: var(--ink-600);
 }
 
 .sidebar h1 {
-  font-size: 2rem;
+  font-size: 2.1rem;
   line-height: 0.95;
   letter-spacing: -0.05em;
-  margin-top: 14px;
+  margin: 14px 0 0;
 }
 
 .sidebar-copy {
-  margin-top: 10px;
+  margin: 12px 0 0;
   color: var(--ink-600);
 }
 
 .nav-list {
   display: grid;
   gap: 10px;
-  margin: 26px 0;
+  align-content: start;
 }
 
 .nav-link {
-  padding: 14px 16px;
-  border-radius: 18px;
+  position: relative;
+  padding: 15px 16px;
+  border-radius: 20px;
   color: var(--ink-800);
   font-weight: 700;
   border: 1px solid transparent;
-  transition: background 0.2s ease, transform 0.2s ease;
+  background: rgba(255, 255, 255, 0.28);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.8);
-  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.52);
+  border-color: rgba(255, 255, 255, 0.55);
 }
 
 .nav-link.active {
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(245, 158, 11, 0.1));
-  border-color: rgba(15, 118, 110, 0.16);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.18), rgba(255, 255, 255, 0.58));
+  border-color: rgba(15, 118, 110, 0.12);
   color: var(--primary-strong);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .sidebar-foot {
   display: grid;
   gap: 16px;
+  margin-top: auto;
 }
 
 .profile-badge {
-  padding: 16px;
-  border-radius: 20px;
-  background: rgba(15, 118, 110, 0.08);
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.profile-label {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: var(--ink-600);
+  font-size: 0.84rem;
 }
 
 .profile-badge strong {
   display: block;
+  font-size: 1.05rem;
 }
 
-.profile-badge span {
+.profile-badge span:last-child {
   color: var(--ink-600);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
 }
 
 .main-panel {
   display: grid;
-  gap: 18px;
+  gap: 20px;
+  min-width: 0;
 }
 
 .topbar {
@@ -172,13 +215,18 @@ function logout() {
   justify-content: space-between;
   gap: 18px;
   align-items: center;
-  padding: 20px 24px;
+  padding: 22px 24px;
 }
 
 .topbar h2 {
-  margin-top: 6px;
-  font-size: 1.8rem;
+  margin: 8px 0 0;
+  font-size: 1.85rem;
   letter-spacing: -0.05em;
+}
+
+.topbar-copy {
+  margin: 10px 0 0;
+  color: var(--ink-600);
 }
 
 .topbar-meta {
@@ -189,12 +237,13 @@ function logout() {
 }
 
 .subtle {
-  background: rgba(245, 158, 11, 0.14);
+  background: var(--accent-soft);
   color: #b45309;
+  border-color: rgba(245, 158, 11, 0.12);
 }
 
 .view-slot {
-  padding-bottom: 18px;
+  padding-bottom: 20px;
 }
 
 @media (max-width: 1024px) {
@@ -203,6 +252,8 @@ function logout() {
   }
 
   .sidebar {
+    position: relative;
+    top: 0;
     min-height: auto;
   }
 }
