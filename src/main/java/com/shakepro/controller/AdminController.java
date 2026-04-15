@@ -3,12 +3,20 @@ package com.shakepro.controller;
 import com.shakepro.common.result.ApiResponse;
 import com.shakepro.dto.request.admin.AdminCocktailSaveRequest;
 import com.shakepro.dto.request.admin.AdminMaterialSaveRequest;
+import com.shakepro.dto.request.admin.AdminPageAiGenerateRequest;
+import com.shakepro.dto.request.admin.AdminPageCrawlRequest;
+import com.shakepro.dto.request.admin.AdminPageFieldExtractRequest;
 import com.shakepro.dto.response.admin.AdminAiCocktailFavoriteResponse;
 import com.shakepro.dto.response.admin.AdminCocktailDetailResponse;
 import com.shakepro.dto.response.admin.AdminCocktailListResponse;
 import com.shakepro.dto.response.admin.AdminDashboardResponse;
 import com.shakepro.dto.response.admin.AdminMaterialResponse;
+import com.shakepro.dto.response.admin.AdminPageExtractFieldsResponse;
+import com.shakepro.dto.response.admin.AdminPageTextResponse;
 import com.shakepro.dto.response.admin.AdminUserResponse;
+import com.shakepro.service.AdminPageAiGenerateService;
+import com.shakepro.service.AdminPageCrawlService;
+import com.shakepro.service.AdminPageExtractService;
 import com.shakepro.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,6 +42,9 @@ import java.util.List;
 public class AdminController {
 
     private final AdminService adminService;
+    private final AdminPageCrawlService adminPageCrawlService;
+    private final AdminPageExtractService adminPageExtractService;
+    private final AdminPageAiGenerateService adminPageAiGenerateService;
 
     @Operation(summary = "后台仪表盘")
     @GetMapping("/dashboard")
@@ -130,5 +141,23 @@ public class AdminController {
     public ApiResponse<Void> deleteAiCocktailFavorite(@PathVariable Long id) {
         adminService.deleteAiCocktailFavorite(id);
         return ApiResponse.success();
+    }
+
+    @Operation(summary = "抓取网页HTML原文")
+    @PostMapping("/crawl/page-text")
+    public ApiResponse<AdminPageTextResponse> crawlPageText(@Valid @RequestBody AdminPageCrawlRequest request) {
+        return ApiResponse.success(adminPageCrawlService.crawlPageText(request.getUrl()));
+    }
+
+    @Operation(summary = "从HTML原文提取配方字段")
+    @PostMapping("/crawl/extract-fields")
+    public ApiResponse<AdminPageExtractFieldsResponse> extractFields(@Valid @RequestBody AdminPageFieldExtractRequest request) {
+        return ApiResponse.success(adminPageExtractService.extractFields(request));
+    }
+
+    @Operation(summary = "基于已提取字段生成中文最终结果")
+    @PostMapping("/crawl/generate-fields")
+    public ApiResponse<AdminPageExtractFieldsResponse> generateFields(@Valid @RequestBody AdminPageAiGenerateRequest request) {
+        return ApiResponse.success(adminPageAiGenerateService.generateChineseFields(request.toExtractedResponse()));
     }
 }

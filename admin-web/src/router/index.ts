@@ -18,6 +18,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'favorites', name: 'favorites', component: () => import('@/views/admin/Favorites.vue') },
       { path: 'materials', name: 'materials', component: () => import('@/views/admin/Materials.vue') },
       { path: 'cocktails', name: 'cocktails', component: () => import('@/views/admin/Cocktails.vue') },
+      { path: 'crawler', name: 'crawler', component: () => import('@/views/admin/PageCrawler.vue') },
     ],
   },
 ]

@@ -17,7 +17,7 @@ public class AiConfig {
     private String baseUrl;
     private String apiKey;
     private String model;
-    private int timeoutMs = 15000;
+    private int timeoutMs = 45000;
 
     @Bean
     public HttpClient aiHttpClient() {

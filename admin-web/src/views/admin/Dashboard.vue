@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { adminApi, type DashboardStats } from '@/api/admin'
 
 const stats = ref<DashboardStats | null>(null)
@@ -7,13 +7,35 @@ const loading = ref(false)
 
 const statCards = [
   { key: 'totalUsers', label: '用户总数', tone: 'green' },
-  { key: 'totalAdmins', label: '管理员', tone: 'gold' },
+  { key: 'totalAdmins', label: '管理账号', tone: 'gold' },
   { key: 'totalCocktails', label: '鸡尾酒条目', tone: 'blue' },
   { key: 'totalMaterials', label: '材料条目', tone: 'green' },
   { key: 'totalFavorites', label: '收藏记录', tone: 'gold' },
   { key: 'totalAiCocktailFavorites', label: 'AI 配方收藏', tone: 'blue' },
   { key: 'totalFiles', label: '文件记录', tone: 'blue' },
 ] as const
+
+const highlights = computed(() => {
+  if (!stats.value) {
+    return [
+      '加载后可快速看到用户、酒单、材料与收藏的整体情况。',
+      '刷新数据后更容易判断今天优先处理哪一块内容。',
+      '如果刚更新了酒单或材料，这里会同步显示最新规模。',
+    ]
+  }
+
+  return [
+    `当前共沉淀 ${stats.value.totalUsers} 位用户，其中管理账号 ${stats.value.totalAdmins} 位。`,
+    `已整理 ${stats.value.totalCocktails} 款鸡尾酒，并关联 ${stats.value.totalMaterials} 种材料。`,
+    `收藏总量达到 ${stats.value.totalFavorites + stats.value.totalAiCocktailFavorites} 条，适合优先回看热门内容。`,
+  ]
+})
+
+const suggestions = computed(() => [
+  '优先检查新上架酒单的图片、简介和步骤是否完整。',
+  '根据收藏趋势补齐常用材料标签，方便后续检索。',
+  '定期清理不需要保留的测试内容，保持列表更干净。',
+])
 
 async function loadDashboard() {
   loading.value = true
@@ -31,8 +53,8 @@ onMounted(loadDashboard)
   <section>
     <div class="page-head">
       <div>
-        <h1 class="page-title">后台总览</h1>
-        <p class="page-subtitle">这一页先给你最核心的运营和内容规模感知，方便答辩时直接展示系统整体数据面貌。</p>
+        <h1 class="page-title">经营概览</h1>
+        <p class="page-subtitle">快速了解用户、酒单、材料和收藏的当前规模，把今天最重要的维护事项排在前面。</p>
       </div>
       <button class="button-primary" :disabled="loading" @click="loadDashboard">
         {{ loading ? '刷新中...' : '刷新数据' }}
@@ -48,22 +70,18 @@ onMounted(loadDashboard)
 
     <div class="insight-grid">
       <article class="insight-panel card">
-        <p class="insight-tag">CONTROL NOTES</p>
-        <h3>后台改造已经完成的重点</h3>
+        <p class="insight-tag">今日关注</p>
+        <h3>一眼看清当前状态</h3>
         <ul>
-          <li>现有 Web 路由已切为后台管理端，不再承载 C 端页面。</li>
-          <li>新增管理员鉴权和 <code>/api/admin/**</code> 接口层。</li>
-          <li>用户、收藏、材料、鸡尾酒四类核心管理对象已纳入后台。</li>
+          <li v-for="item in highlights" :key="item">{{ item }}</li>
         </ul>
       </article>
 
       <article class="insight-panel accent card">
-        <p class="insight-tag">NEXT STEP</p>
-        <h3>下一步可以继续补什么</h3>
+        <p class="insight-tag">维护建议</p>
+        <h3>让内容区更顺手</h3>
         <ul>
-          <li>Banner / 分类配置</li>
-          <li>用户启停用和密码重置</li>
-          <li>AI 推荐调用记录与运营分析</li>
+          <li v-for="item in suggestions" :key="item">{{ item }}</li>
         </ul>
       </article>
     </div>
@@ -79,10 +97,11 @@ onMounted(loadDashboard)
 
 .stat-card {
   padding: 22px;
-  min-height: 150px;
+  min-height: 156px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  overflow: hidden;
 }
 
 .stat-card span {
@@ -96,20 +115,20 @@ onMounted(loadDashboard)
 }
 
 .stat-card.green {
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(255, 255, 255, 0.9));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.12), rgba(255, 255, 255, 0.72));
 }
 
 .stat-card.gold {
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.1), rgba(255, 255, 255, 0.9));
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.14), rgba(255, 255, 255, 0.72));
 }
 
 .stat-card.blue {
-  background: linear-gradient(180deg, rgba(21, 33, 43, 0.08), rgba(255, 255, 255, 0.9));
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.14), rgba(255, 255, 255, 0.72));
 }
 
 .insight-grid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: 1.15fr 0.85fr;
   gap: 16px;
   margin-top: 18px;
 }
@@ -136,10 +155,11 @@ onMounted(loadDashboard)
   color: var(--ink-600);
   letter-spacing: 0.2em;
   font-size: 0.72rem;
+  margin: 0;
 }
 
 .accent {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(255, 255, 255, 0.94));
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(255, 255, 255, 0.76));
 }
 
 @media (max-width: 960px) {

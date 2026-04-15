@@ -41,7 +41,9 @@ http.interceptors.response.use(
         window.location.href = '/login'
       }
     }
-    const message = error.response?.data?.message || error.message || '网络异常'
+    const message = error.code === 'ECONNABORTED'
+      ? '请求超时，请重试；如果是 AI 生成阶段，可联系管理员延长超时配置'
+      : error.response?.data?.message || error.message || '网络异常'
     return Promise.reject(new Error(message))
   }
 )
