@@ -1,5 +1,6 @@
 package com.shakepro.service.impl;
 
+import com.shakepro.common.util.OssImageUrlBuilder;
 import com.shakepro.dto.response.MaterialResponse;
 import com.shakepro.entity.Material;
 import com.shakepro.repository.MaterialRepository;
@@ -14,6 +15,7 @@ import java.util.List;
 public class MaterialServiceImpl implements MaterialService {
 
     private final MaterialRepository materialRepository;
+    private final OssImageUrlBuilder ossImageUrlBuilder;
 
     @Override
     public List<MaterialResponse> listMaterials(String keyword) {
@@ -24,12 +26,20 @@ public class MaterialServiceImpl implements MaterialService {
             materials = materialRepository.findAll();
         }
         return materials.stream()
-                .map(MaterialResponse::from)
+                .map(this::toResponse)
                 .toList();
     }
 
     @Override
     public List<String> listCategories() {
         return materialRepository.findDistinctCategories();
+    }
+
+    private MaterialResponse toResponse(Material material) {
+        MaterialResponse response = MaterialResponse.from(material);
+        response.setImageUrlThumb(ossImageUrlBuilder.toThumbUrl(response.getImageUrl()));
+        response.setImageUrlCard(ossImageUrlBuilder.toCardUrl(response.getImageUrl()));
+        response.setImageUrlDetail(ossImageUrlBuilder.toDetailUrl(response.getImageUrl()));
+        return response;
     }
 }

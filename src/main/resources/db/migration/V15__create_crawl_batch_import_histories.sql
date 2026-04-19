@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS `crawl_batch_import_histories` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `list_url` VARCHAR(1000) NOT NULL,
+    `list_title` VARCHAR(255) DEFAULT NULL,
+    `only_new` TINYINT(1) NOT NULL DEFAULT 1,
+    `max_items` INT NOT NULL,
+    `concurrency` INT NOT NULL,
+    `auto_generate` TINYINT(1) NOT NULL DEFAULT 0,
+    `auto_save` TINYINT(1) NOT NULL DEFAULT 0,
+    `discovered_count` INT NOT NULL DEFAULT 0,
+    `selected_count` INT NOT NULL DEFAULT 0,
+    `processed_count` INT NOT NULL DEFAULT 0,
+    `success_count` INT NOT NULL DEFAULT 0,
+    `failure_count` INT NOT NULL DEFAULT 0,
+    `duration_ms` BIGINT NOT NULL DEFAULT 0,
+    `status` VARCHAR(32) NOT NULL,
+    `error_message` TEXT DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_crawl_batch_import_histories_created_at` (`created_at`),
+    KEY `idx_crawl_batch_import_histories_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -7,10 +7,24 @@ import {
   type AdminMaterial,
   type PageResult,
 } from '@/api/admin'
+import { buildGeneratedPayloadFromForm, type GeneratedEditorFormSnapshot } from './cocktailPayload'
+import AdminMetricCard from '@/components/admin/AdminMetricCard.vue'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import AdminPagination from '@/components/admin/AdminPagination.vue'
+import AdminToolbar from '@/components/admin/AdminToolbar.vue'
+import CocktailListCard from './cocktails/CocktailListCard.vue'
+import CocktailEditorModal from './cocktails/CocktailEditorModal.vue'
+import CocktailDetailModal from './cocktails/CocktailDetailModal.vue'
 
 const loading = ref(false)
 const materialsLoading = ref(false)
+const submitting = ref(false)
+const uploadingHeroImage = ref(false)
+const uploadImageError = ref('')
+const uploadImageSuccess = ref('')
 const keyword = ref('')
+const category = ref('')
+const categoryOptions = ref<string[]>([])
 const pageData = ref<PageResult<AdminCocktailListItem>>({
   content: [],
   totalElements: 0,
@@ -20,31 +34,78 @@ const pageData = ref<PageResult<AdminCocktailListItem>>({
 })
 
 const materialOptions = ref<AdminMaterial[]>([])
-const showModal = ref(false)
+const showEditorModal = ref(false)
+const showDetailModal = ref(false)
 const editingId = ref<number | null>(null)
+const editingFromDetail = ref(false)
+const submitError = ref('')
+const detailLoading = ref(false)
+const selectedDetail = ref<AdminCocktailDetail | null>(null)
 
-const form = reactive({
-  name: '',
-  description: '',
-  imageUrl: '',
-  alcoholLevel: '' as string | number,
-  steps: '',
-  materials: [{ materialId: '', amount: '' }] as Array<{ materialId: string | number; amount: string }>,
-})
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+])
+
+function createInitialFormState(): GeneratedEditorFormSnapshot {
+  return {
+    name: '',
+    englishName: '',
+    category: '',
+    heroImage: '',
+    difficulty: '',
+    abv: '',
+    glass: '',
+    garnish: '',
+    highlight: '',
+    subtitle: '',
+    description: '',
+    story: '',
+    flavorTagsText: '',
+    pairingsText: '',
+    serviceNotesText: '',
+    flavorMetrics: [{ name: '', value: '' }],
+    ingredients: [{ materialId: '', name: '', amount: '', note: '' }],
+    steps: [{ title: '', detail: '' }],
+  }
+}
+
+const form = reactive<GeneratedEditorFormSnapshot>(createInitialFormState())
 
 const hasMaterialOptions = computed(() => materialOptions.value.length > 0)
+const visibleCount = computed(() => pageData.value.content.length)
+const formCompletion = computed(() => {
+  const checks = [
+    Boolean(form.name.trim()),
+    Boolean(form.category.trim()),
+    Boolean(form.description.trim()),
+    Boolean(form.heroImage.trim()),
+    form.ingredients.some((item) => item.name.trim()),
+    form.steps.some((item) => item.detail.trim()),
+  ]
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100)
+})
 
 async function loadCocktails(nextPage = 0) {
   loading.value = true
   try {
     pageData.value = await adminApi.getCocktails({
       keyword: keyword.value || undefined,
+      category: category.value || undefined,
       page: nextPage,
       size: 8,
     })
   } finally {
     loading.value = false
   }
+}
+
+async function loadCategories() {
+  categoryOptions.value = await adminApi.getCocktailCategories()
 }
 
 async function loadMaterials() {
@@ -56,76 +117,157 @@ async function loadMaterials() {
   }
 }
 
+function patchFormState(next: GeneratedEditorFormSnapshot) {
+  Object.assign(form, next)
+}
+
 function resetForm() {
   editingId.value = null
-  form.name = ''
-  form.description = ''
-  form.imageUrl = ''
-  form.alcoholLevel = ''
-  form.steps = ''
-  form.materials = [{ materialId: '', amount: '' }]
+  submitError.value = ''
+  uploadImageError.value = ''
+  uploadImageSuccess.value = ''
+  patchFormState(createInitialFormState())
 }
 
 function openCreate() {
   resetForm()
-  showModal.value = true
+  editingFromDetail.value = false
+  showEditorModal.value = true
 }
 
 async function openEdit(item: AdminCocktailListItem) {
+  uploadImageError.value = ''
+  uploadImageSuccess.value = ''
   const detail = await adminApi.getCocktail(item.id)
   fillForm(detail)
   editingId.value = item.id
-  showModal.value = true
+  editingFromDetail.value = false
+  showEditorModal.value = true
 }
 
 function fillForm(detail: AdminCocktailDetail) {
-  form.name = detail.name
-  form.description = detail.description || ''
-  form.imageUrl = detail.imageUrl || ''
-  form.alcoholLevel = detail.alcoholLevel ?? ''
-  form.steps = detail.steps || ''
-  form.materials = detail.materials.length
-    ? detail.materials.map((item) => ({
-        materialId: item.materialId,
-        amount: item.amount,
-      }))
-    : [{ materialId: '', amount: '' }]
-}
-
-function addMaterialRow() {
-  form.materials.push({ materialId: '', amount: '' })
-}
-
-function removeMaterialRow(index: number) {
-  if (form.materials.length === 1) return
-  form.materials.splice(index, 1)
+  patchFormState({
+    name: detail.name || '',
+    englishName: detail.englishName || '',
+    category: detail.category || '',
+    heroImage: detail.heroImage || detail.imageUrl || '',
+    difficulty: detail.difficulty || '',
+    abv: detail.abv || (detail.alcoholLevel != null ? `${detail.alcoholLevel}%` : ''),
+    glass: detail.glass || '',
+    garnish: detail.garnish || '',
+    highlight: detail.highlight || '',
+    subtitle: detail.subtitle || '',
+    description: detail.description || '',
+    story: detail.story || '',
+    flavorTagsText: (detail.flavorTags || []).join('\n'),
+    pairingsText: (detail.pairings || []).join('\n'),
+    serviceNotesText: (detail.serviceNotes || []).join('\n'),
+    flavorMetrics: detail.flavorMetrics?.length
+      ? detail.flavorMetrics.map((item) => ({ name: item.name || '', value: item.value ?? '' }))
+      : [{ name: '', value: '' }],
+    ingredients: detail.materials.length
+      ? detail.materials.map((item) => ({
+          materialId: item.materialId ?? '',
+          name: item.displayName || item.name || '',
+          amount: item.amount || '',
+          note: item.note || '',
+        }))
+      : [{ materialId: '', name: '', amount: '', note: '' }],
+    steps: detail.steps?.length
+      ? detail.steps.map((item) => ({ title: item.title || '', detail: item.detail || '' }))
+      : detail.legacySteps
+        ? detail.legacySteps.split(/\r?\n/).filter(Boolean).map((line) => ({ title: '', detail: line }))
+        : [{ title: '', detail: '' }],
+  })
 }
 
 async function submit() {
-  if (!form.name.trim()) return
-
-  const payload = {
-    name: form.name.trim(),
-    description: form.description.trim() || undefined,
-    imageUrl: form.imageUrl.trim() || undefined,
-    alcoholLevel: form.alcoholLevel === '' ? null : Number(form.alcoholLevel),
-    steps: form.steps.trim() || undefined,
-    materials: form.materials
-      .filter((item) => item.materialId && item.amount.trim())
-      .map((item) => ({
-        materialId: Number(item.materialId),
-        amount: item.amount.trim(),
-      })),
+  submitError.value = ''
+  uploadImageError.value = ''
+  uploadImageSuccess.value = ''
+  if (!form.name.trim()) {
+    submitError.value = '名称不能为空'
+    return
+  }
+  if (uploadingHeroImage.value) {
+    submitError.value = '图片上传中，请稍后再保存'
+    return
   }
 
-  if (editingId.value) {
-    await adminApi.updateCocktail(editingId.value, payload)
-  } else {
-    await adminApi.createCocktail(payload)
+  const payload = buildGeneratedPayloadFromForm(form)
+  if (!payload.ingredients.length) {
+    submitError.value = '至少填写一条材料'
+    return
+  }
+  if (!payload.steps.length) {
+    submitError.value = '至少填写一步制作步骤'
+    return
   }
 
-  showModal.value = false
-  await loadCocktails(pageData.value.number)
+  submitting.value = true
+  try {
+    const currentEditingId = editingId.value
+    let saved: AdminCocktailDetail
+    if (editingId.value) {
+      saved = await adminApi.updateGeneratedCocktail(editingId.value, payload)
+    } else {
+      saved = await adminApi.createGeneratedCocktail(payload)
+    }
+
+    if (currentEditingId && selectedDetail.value?.id === currentEditingId) {
+      selectedDetail.value = saved
+    }
+    if (editingFromDetail.value && currentEditingId) {
+      selectedDetail.value = saved
+      showDetailModal.value = true
+    }
+
+    editingFromDetail.value = false
+    showEditorModal.value = false
+    await loadCocktails(pageData.value.number)
+  } catch (error) {
+    submitError.value = error instanceof Error ? error.message : '保存失败，请稍后重试'
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function uploadHeroImage(file: File) {
+  uploadImageError.value = ''
+  uploadImageSuccess.value = ''
+
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    uploadImageError.value = '仅支持 JPEG、PNG、GIF、WebP、SVG 图片'
+    return
+  }
+  if (file.size > MAX_IMAGE_SIZE) {
+    uploadImageError.value = '图片大小不能超过 10MB'
+    return
+  }
+
+  uploadingHeroImage.value = true
+  try {
+    const presign = await adminApi.createOssPresign({
+      filename: file.name,
+      contentType: file.type,
+      size: file.size,
+    })
+
+    await adminApi.uploadToOss(presign.uploadUrl, file, file.type)
+    await adminApi.saveOssFileRecord({
+      objectKey: presign.objectKey,
+      url: presign.publicUrl,
+      contentType: file.type,
+      size: file.size,
+    })
+
+    form.heroImage = presign.publicUrl
+    uploadImageSuccess.value = '图片上传成功，主图地址已自动填充'
+  } catch (error) {
+    uploadImageError.value = error instanceof Error ? error.message : '图片上传失败，请稍后重试'
+  } finally {
+    uploadingHeroImage.value = false
+  }
 }
 
 async function remove(item: AdminCocktailListItem) {
@@ -134,265 +276,178 @@ async function remove(item: AdminCocktailListItem) {
   await loadCocktails(Math.max(pageData.value.number - (pageData.value.content.length === 1 ? 1 : 0), 0))
 }
 
+async function openDetail(item: AdminCocktailListItem) {
+  showDetailModal.value = true
+  detailLoading.value = true
+  try {
+    selectedDetail.value = await adminApi.getCocktail(item.id)
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+function editFromDetail() {
+  if (!selectedDetail.value) return
+  fillForm(selectedDetail.value)
+  editingId.value = selectedDetail.value.id
+  editingFromDetail.value = true
+  showDetailModal.value = false
+  showEditorModal.value = true
+}
+
+function closeEditor() {
+  showEditorModal.value = false
+  submitError.value = ''
+  uploadImageError.value = ''
+  uploadImageSuccess.value = ''
+  if (editingFromDetail.value) {
+    showDetailModal.value = true
+  }
+  editingFromDetail.value = false
+}
+
+function searchCocktails() {
+  loadCocktails(0)
+}
+
+function resetFilters() {
+  keyword.value = ''
+  category.value = ''
+  loadCocktails(0)
+}
+
 onMounted(async () => {
-  await Promise.all([loadCocktails(), loadMaterials()])
+  await Promise.all([loadCocktails(), loadMaterials(), loadCategories()])
 })
 </script>
 
 <template>
-  <section>
-    <div class="page-head">
-      <div>
-        <h1 class="page-title">鸡尾酒管理</h1>
-        <p class="page-subtitle">集中维护配方、步骤和材料，让酒单内容在每次更新后都保持一致。</p>
-      </div>
-      <button class="button-primary" :disabled="materialsLoading || !hasMaterialOptions" @click="openCreate">
-        {{ materialsLoading ? '材料准备中...' : '新建鸡尾酒' }}
-      </button>
+  <section class="cocktails-page">
+    <AdminPageHeader
+      eyebrow="Cocktail Library"
+      title="鸡尾酒库管理"
+      subtitle="保留可视化卡片浏览，但把操作结构收束到更克制的旗舰工作区里。"
+    >
+      <template #meta>
+        <span class="badge">库内总数 {{ pageData.totalElements }}</span>
+        <span class="badge subtle">可关联材料 {{ materialOptions.length }}</span>
+      </template>
+      <template #actions>
+        <button class="button-primary create-button" :disabled="materialsLoading || !hasMaterialOptions" @click="openCreate">
+          {{ materialsLoading ? '材料准备中...' : '新建鸡尾酒' }}
+        </button>
+      </template>
+    </AdminPageHeader>
+
+    <div class="dual-grid spotlight-grid">
+      <AdminMetricCard eyebrow="当前页" label="展示数量" :value="visibleCount" hint="保留图卡浏览，快速发现需要回看的条目。" tone="strong" />
+      <AdminMetricCard eyebrow="表单准备" label="材料选项" :value="materialOptions.length" hint="关联材料越完整，编辑过程越顺滑。" tone="warm" />
     </div>
 
-    <div class="toolbar">
-      <input v-model="keyword" class="field search" type="text" placeholder="按名称搜索鸡尾酒" @keyup.enter="loadCocktails()" />
-      <button class="button-secondary" :disabled="loading" @click="loadCocktails()">
+    <AdminToolbar>
+      <input v-model="keyword" class="field search" type="text" placeholder="按名称搜索鸡尾酒" @keyup.enter="searchCocktails" />
+      <select v-model="category" class="select category-select" @change="searchCocktails">
+        <option value="">全部类别</option>
+        <option v-for="item in categoryOptions" :key="item" :value="item">{{ item }}</option>
+      </select>
+      <button class="button-secondary" :disabled="loading" @click="searchCocktails">
         {{ loading ? '查询中...' : '搜索' }}
       </button>
-    </div>
+      <button class="button-ghost" :disabled="loading" @click="resetFilters">重置筛选</button>
+    </AdminToolbar>
 
     <div class="cocktail-grid">
-      <article v-for="item in pageData.content" :key="item.id" class="cocktail-card card">
-        <div class="cover" :style="{ backgroundImage: item.imageUrl ? `url(${item.imageUrl})` : undefined }">
-          <span class="badge">#{{ item.id }}</span>
-        </div>
-        <div class="body">
-          <div class="title-row">
-            <h3>{{ item.name }}</h3>
-            <span>{{ item.alcoholLevel ?? '-' }}%</span>
-          </div>
-          <p>创建于 {{ item.createdAt?.replace('T', ' ') || '-' }}</p>
-          <div class="actions">
-            <button class="button-secondary" @click="openEdit(item)">编辑</button>
-            <button class="button-danger" @click="remove(item)">删除</button>
-          </div>
-        </div>
-      </article>
+      <CocktailListCard
+        v-for="item in pageData.content"
+        :key="item.id"
+        :item="item"
+        @view="openDetail"
+        @edit="openEdit"
+        @remove="remove"
+      />
+
       <article v-if="!pageData.content.length" class="cocktail-card card empty-card">
         <h3>还没有鸡尾酒内容</h3>
-        <p>先添加几款招牌酒单，列表就会很快充实起来。</p>
+        <p>可以先新建 1-2 款主打酒单，后续通过抓取页导入会更高效。</p>
       </article>
     </div>
 
-    <div class="pager">
-      <button class="button-secondary" :disabled="pageData.number <= 0 || loading" @click="loadCocktails(pageData.number - 1)">上一页</button>
-      <span>第 {{ pageData.number + 1 }} / {{ Math.max(pageData.totalPages, 1) }} 页</span>
-      <button
-        class="button-secondary"
-        :disabled="pageData.number + 1 >= pageData.totalPages || loading || !pageData.totalPages"
-        @click="loadCocktails(pageData.number + 1)"
-      >
-        下一页
-      </button>
-    </div>
+    <AdminPagination
+      :page="pageData.number"
+      :total-pages="pageData.totalPages"
+      :loading="loading"
+      @prev="loadCocktails(pageData.number - 1)"
+      @next="loadCocktails(pageData.number + 1)"
+    />
 
-    <div v-if="showModal" class="modal-backdrop" @click.self="showModal = false">
-      <div class="modal-panel cocktail-modal">
-        <div class="page-head compact">
-          <div>
-            <h2 class="page-title">{{ editingId ? '编辑鸡尾酒' : '新建鸡尾酒' }}</h2>
-            <p class="page-subtitle">逐项补充图片、简介、步骤和材料，展示内容会更完整清晰。</p>
-          </div>
-        </div>
+    <CocktailEditorModal
+      :visible="showEditorModal"
+      :editing="editingId !== null"
+      :form="form"
+      :material-options="materialOptions"
+      :submitting="submitting"
+      :uploading-hero-image="uploadingHeroImage"
+      :upload-image-error="uploadImageError"
+      :upload-image-success="uploadImageSuccess"
+      :submit-error="submitError"
+      :form-completion="formCompletion"
+      @close="closeEditor"
+      @submit="submit"
+      @upload-hero-image="uploadHeroImage"
+    />
 
-        <div class="form-grid">
-          <label>
-            <span>名称</span>
-            <input v-model="form.name" class="field" type="text" placeholder="例如：Mojito" />
-          </label>
-          <label>
-            <span>图片地址</span>
-            <input v-model="form.imageUrl" class="field" type="text" placeholder="https://..." />
-          </label>
-          <label>
-            <span>酒精度</span>
-            <input v-model="form.alcoholLevel" class="field" type="number" min="0" max="100" placeholder="0-100" />
-          </label>
-          <label class="span-two">
-            <span>描述</span>
-            <textarea v-model="form.description" class="textarea" rows="3" placeholder="写下这款酒的风味亮点"></textarea>
-          </label>
-          <label class="span-two">
-            <span>制作步骤</span>
-            <textarea v-model="form.steps" class="textarea" rows="6" placeholder="每一步单独换行录入"></textarea>
-          </label>
-        </div>
-
-        <div class="material-editor">
-          <div class="material-head">
-            <h3>材料明细</h3>
-            <button class="button-secondary" type="button" @click="addMaterialRow">添加一行</button>
-          </div>
-
-          <div v-for="(item, index) in form.materials" :key="index" class="material-row">
-            <select v-model="item.materialId" class="select">
-              <option value="">选择材料</option>
-              <option v-for="material in materialOptions" :key="material.id" :value="material.id">
-                {{ material.name }}<template v-if="material.category"> / {{ material.category }}</template>
-              </option>
-            </select>
-            <input v-model="item.amount" class="field" type="text" placeholder="例如：45ml" />
-            <button class="button-danger mini" type="button" @click="removeMaterialRow(index)">删除</button>
-          </div>
-        </div>
-
-        <div class="footer-actions">
-          <button class="button-secondary" @click="showModal = false">取消</button>
-          <button class="button-primary" @click="submit">保存</button>
-        </div>
-      </div>
-    </div>
+    <CocktailDetailModal
+      :visible="showDetailModal"
+      :loading="detailLoading"
+      :detail="selectedDetail"
+      @close="showDetailModal = false"
+      @edit="editFromDetail"
+    />
   </section>
 </template>
 
 <style scoped>
+.cocktails-page {
+  display: grid;
+  gap: 18px;
+}
+
+.spotlight-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .search {
-  max-width: 320px;
+  max-width: 340px;
+}
+
+.category-select {
+  min-width: 180px;
 }
 
 .cocktail-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 16px;
-}
-
-.cocktail-card {
-  overflow: hidden;
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
-}
-
-.cocktail-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 28px 56px rgba(16, 32, 46, 0.14);
-}
-
-.cover {
-  min-height: 190px;
-  padding: 18px;
-  background:
-    linear-gradient(135deg, rgba(15, 118, 110, 0.42), rgba(16, 32, 46, 0.46)),
-    linear-gradient(135deg, rgba(245, 158, 11, 0.24), transparent);
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: flex-start;
-  transition: transform 0.28s ease;
-}
-
-.cocktail-card:hover .cover {
-  transform: scale(1.02);
-}
-
-.body {
-  padding: 18px;
-}
-
-.title-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-}
-
-.title-row h3 {
-  font-size: 1.35rem;
-  letter-spacing: -0.04em;
-}
-
-.body p {
-  margin: 10px 0 18px;
-  color: var(--ink-600);
-}
-
-.actions,
-.footer-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.pager {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  margin-top: 18px;
-}
-
-.cocktail-modal {
-  width: min(920px, 100%);
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.form-grid label {
-  display: grid;
-  gap: 8px;
-}
-
-.span-two {
-  grid-column: span 2;
-}
-
-.material-editor {
-  margin-top: 22px;
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
-}
-
-.material-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 14px;
-}
-
-.material-row {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr auto;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.mini {
-  padding-inline: 14px;
 }
 
 .empty-card {
-  padding: 22px;
+  padding: 24px;
 }
 
-.compact {
-  margin-bottom: 18px;
+.empty-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.45rem;
+}
+
+.empty-card p {
+  margin: 0;
+  color: var(--ink-600);
 }
 
 @media (max-width: 960px) {
-  .cocktail-grid,
-  .form-grid,
-  .material-row {
+  .spotlight-grid,
+  .cocktail-grid {
     grid-template-columns: 1fr;
-  }
-
-  .span-two {
-    grid-column: auto;
-  }
-
-  .pager,
-  .material-head {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 </style>

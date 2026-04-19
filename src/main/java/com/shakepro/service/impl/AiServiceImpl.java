@@ -15,6 +15,7 @@ import com.shakepro.service.AiService;
 import com.shakepro.service.support.QwenJsonCompletionClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -32,6 +33,7 @@ import java.util.Map;
 public class AiServiceImpl implements AiService {
 
     private final AiConfig aiConfig;
+    @Qualifier("aiHttpClient")
     private final HttpClient aiHttpClient;
     private final ObjectMapper objectMapper;
     private final QwenJsonCompletionClient qwenJsonCompletionClient;

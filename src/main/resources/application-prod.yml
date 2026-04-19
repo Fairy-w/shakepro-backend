@@ -22,13 +22,17 @@ jwt:
   expiration-seconds: ${JWT_EXPIRATION:86400}
 
 oss:
-  type: ${OSS_TYPE:minio}
+  type: ${OSS_TYPE:aliyun}
   endpoint: ${OSS_ENDPOINT}
   access-key: ${OSS_ACCESS_KEY}
   secret-key: ${OSS_SECRET_KEY}
   bucket: ${OSS_BUCKET}
   public-base-url: ${OSS_PUBLIC_URL}
   presign-expire-seconds: 3600
+  image-style:
+    thumb: ${OSS_IMAGE_STYLE_THUMB:thumb}
+    card: ${OSS_IMAGE_STYLE_CARD:card}
+    detail: ${OSS_IMAGE_STYLE_DETAIL:detail}
 
 ai:
   provider: ${AI_PROVIDER:openai}
@@ -41,6 +45,26 @@ ai:
     api-key: ${QWEN_API_KEY}
     model: ${QWEN_MODEL:qwen-plus}
     timeout-ms: ${QWEN_TIMEOUT:45000}
+
+barcode:
+  lookup:
+    enabled: ${BARCODE_LOOKUP_ENABLED:true}
+    base-url: ${BARCODE_BASE_URL:https://world.openfoodfacts.org}
+    timeout-ms: ${BARCODE_TIMEOUT:3500}
+    cache-hours: ${BARCODE_CACHE_HOURS:168}
+    user-agent: ${BARCODE_USER_AGENT:ShakeProBackend/1.0}
+
+cocktaildb:
+  enabled: ${COCKTAILDB_ENABLED:true}
+  base-url: ${COCKTAILDB_BASE_URL:https://www.thecocktaildb.com}
+  api-key: ${COCKTAILDB_API_KEY:1}
+  connect-timeout-ms: ${COCKTAILDB_CONNECT_TIMEOUT:5000}
+  read-timeout-ms: ${COCKTAILDB_READ_TIMEOUT:10000}
+  sync:
+    max-items: ${COCKTAILDB_SYNC_MAX_ITEMS:1000}
+    dry-run: ${COCKTAILDB_SYNC_DRY_RUN:false}
+    overwrite-image: ${COCKTAILDB_SYNC_OVERWRITE_IMAGE:false}
+    oss-prefix: ${COCKTAILDB_SYNC_OSS_PREFIX:uploads/materials/cocktaildb}
 
 logging:
   level:

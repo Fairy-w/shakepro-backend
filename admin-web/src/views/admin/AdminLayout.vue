@@ -3,20 +3,90 @@ import { computed, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+interface NavItem {
+  label: string
+  to: string
+  group: string
+  pulse: string
+}
+
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const navItems = [
-  { label: '概览', to: '/dashboard' },
-  { label: '用户', to: '/users' },
-  { label: '收藏', to: '/favorites' },
-  { label: '材料', to: '/materials' },
-  { label: '鸡尾酒', to: '/cocktails' },
-  { label: '网页抓取', to: '/crawler' },
+const navItems: NavItem[] = [
+  {
+    label: '概览',
+    to: '/dashboard',
+    group: '旗舰总览',
+    pulse: '今日指挥台',
+  },
+  {
+    label: '鸡尾酒',
+    to: '/cocktails',
+    group: '内容资产',
+    pulse: '酒单策展',
+  },
+  {
+    label: '材料',
+    to: '/materials',
+    group: '内容资产',
+    pulse: '基础库存',
+  },
+  {
+    label: '用户材料',
+    to: '/user-materials',
+    group: '内容资产',
+    pulse: '用户画像',
+  },
+  {
+    label: '用户',
+    to: '/users',
+    group: '用户与收藏',
+    pulse: '成员结构',
+  },
+  {
+    label: '收藏',
+    to: '/favorites',
+    group: '用户与收藏',
+    pulse: '灵感沉淀',
+  },
+  {
+    label: '网页抓取',
+    to: '/crawler',
+    group: 'AI 工作台',
+    pulse: '单页流程',
+  },
+  {
+    label: '批量抓取',
+    to: '/crawler-batch',
+    group: 'AI 工作台',
+    pulse: '批处理控制',
+  },
 ]
 
-const currentLabel = computed(() => navItems.find((item) => route.path.startsWith(item.to))?.label || '概览')
+const navGroups = computed(() => {
+  const grouped = new Map<string, NavItem[]>()
+  navItems.forEach((item) => {
+    const current = grouped.get(item.group) || []
+    current.push(item)
+    grouped.set(item.group, current)
+  })
+  return Array.from(grouped.entries()).map(([label, items]) => ({ label, items }))
+})
+
+const currentNavItem = computed(() => {
+  const matches = navItems.filter((item) => route.path.startsWith(item.to))
+  if (!matches.length) {
+    return navItems[0]
+  }
+  return matches.sort((left, right) => right.to.length - left.to.length)[0]
+})
+
+function isActiveNav(path: string): boolean {
+  return currentNavItem.value?.to === path
+}
+
 const roleLabel = computed(() => {
   const role = authStore.user?.role
 
@@ -31,6 +101,8 @@ const roleLabel = computed(() => {
   return role || '管理账号'
 })
 
+const initials = computed(() => (authStore.nickname || authStore.user?.username || 'SP').slice(0, 2).toUpperCase())
+
 onMounted(() => {
   if (!authStore.user) {
     authStore.fetchMe()
@@ -44,52 +116,48 @@ function logout() {
 </script>
 
 <template>
-  <div class="admin-shell layout-grid">
-    <aside class="sidebar card">
-      <div class="sidebar-main">
-        <div class="brand-block">
-          <p class="sidebar-tag">ShakePro Lounge</p>
-          <h1>酒饮工作台</h1>
-          <p class="sidebar-copy">把酒单、材料、收藏和成员信息放在同一块玻璃面板里，切换页面也始终稳稳停在手边。</p>
-        </div>
-
-        <nav class="nav-list">
-          <RouterLink
-            v-for="item in navItems"
-            :key="item.to"
-            :to="item.to"
-            class="nav-link"
-            :class="{ active: route.path.startsWith(item.to) }"
-          >
-            {{ item.label }}
-          </RouterLink>
-        </nav>
+  <a class="skip-link" href="#admin-main">跳到主内容</a>
+  <div class="admin-shell reserve-layout">
+    <aside class="reserve-sidebar">
+      <div class="reserve-sidebar__top">
+        <p class="reserve-sidebar__eyebrow">ShakePro Lounge</p>
+        <h1>Velvet Reserve</h1>
+        <p class="reserve-sidebar__copy">把鸡尾酒内容、用户偏好与 AI 处理流程收束到一套旗舰运营中枢里。</p>
       </div>
 
-      <div class="sidebar-foot">
-        <div class="profile-badge">
-          <span class="profile-label">当前账号</span>
-          <strong>{{ authStore.nickname || '管理账号' }}</strong>
-          <span>{{ roleLabel }}</span>
+      <div class="reserve-nav-groups">
+        <section v-for="group in navGroups" :key="group.label" class="reserve-nav-group">
+          <p class="reserve-nav-group__label">{{ group.label }}</p>
+          <nav class="reserve-nav-list">
+            <RouterLink
+              v-for="item in group.items"
+              :key="item.to"
+              :to="item.to"
+              class="reserve-nav-link"
+              :class="{ active: isActiveNav(item.to) }"
+            >
+              <span>{{ item.label }}</span>
+              <small>{{ item.pulse }}</small>
+            </RouterLink>
+          </nav>
+        </section>
+      </div>
+
+      <div class="reserve-sidebar__foot">
+        <div class="operator-card">
+          <div class="operator-card__avatar">{{ initials }}</div>
+          <div>
+            <span class="operator-card__label">当前账号</span>
+            <strong>{{ authStore.nickname || authStore.user?.username || 'ShakePro' }}</strong>
+            <small>{{ roleLabel }}</small>
+          </div>
         </div>
         <button class="button-secondary" @click="logout">退出登录</button>
       </div>
     </aside>
 
-    <main class="main-panel">
-      <header class="topbar card">
-        <div>
-          <p class="topbar-tag">欢迎回来</p>
-          <h2>{{ currentLabel }}</h2>
-          <p class="topbar-copy">查看数据、整理内容、更新酒单，都从这里开始。</p>
-        </div>
-        <div class="topbar-meta">
-          <span class="badge">内容与数据一站管理</span>
-          <span class="badge subtle">左侧导航切换时保持固定位置</span>
-        </div>
-      </header>
-
-      <div class="view-slot">
+    <main id="admin-main" class="reserve-main">
+      <div class="reserve-content">
         <RouterView />
       </div>
     </main>
@@ -97,180 +165,165 @@ function logout() {
 </template>
 
 <style scoped>
-.layout-grid {
+.reserve-layout {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 20px;
   padding: 20px;
-  width: 100%;
 }
 
-.sidebar {
+.reserve-sidebar {
   position: sticky;
   top: 20px;
   align-self: start;
   min-height: calc(100vh - 40px);
   padding: 24px;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at top right, rgba(200, 155, 91, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(74, 47, 42, 0.98), rgba(49, 31, 28, 0.98));
+  color: #fff8f0;
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
-  background:
-    linear-gradient(180deg, rgba(252, 255, 255, 0.78), rgba(236, 244, 248, 0.62)),
-    radial-gradient(circle at top right, rgba(56, 189, 248, 0.14), transparent 34%),
-    radial-gradient(circle at 0% 100%, rgba(245, 158, 11, 0.12), transparent 30%);
-}
-
-.sidebar-main {
-  display: grid;
   gap: 28px;
 }
 
-.sidebar-tag,
-.topbar-tag {
+.reserve-sidebar__eyebrow,
+.reserve-nav-group__label,
+.operator-card__label {
   margin: 0;
-  letter-spacing: 0.22em;
-  font-size: 0.74rem;
-  color: var(--ink-600);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
 
-.sidebar h1 {
-  font-size: 2.1rem;
-  line-height: 0.95;
-  letter-spacing: -0.05em;
+.reserve-sidebar h1 {
+  margin: 10px 0 0;
+  font-size: 2.45rem;
+  line-height: 0.9;
+}
+
+.reserve-sidebar__copy {
   margin: 14px 0 0;
+  color: rgba(255, 248, 240, 0.76);
 }
 
-.sidebar-copy {
-  margin: 12px 0 0;
-  color: var(--ink-600);
+.reserve-nav-groups {
+  display: grid;
+  gap: 20px;
 }
 
-.nav-list {
+.reserve-nav-group {
   display: grid;
   gap: 10px;
+}
+
+.reserve-nav-group__label {
+  color: rgba(255, 248, 240, 0.48);
+}
+
+.reserve-nav-list {
+  display: grid;
+  gap: 8px;
+}
+
+.reserve-nav-link {
+  padding: 13px 14px;
+  border-radius: 18px;
+  display: grid;
+  gap: 4px;
+  color: rgba(255, 248, 240, 0.92);
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.reserve-nav-link small {
+  color: rgba(255, 248, 240, 0.58);
+  font-size: 0.82rem;
+}
+
+.reserve-nav-link:hover {
+  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.reserve-nav-link.active {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(200, 155, 91, 0.12));
+  border-color: rgba(200, 155, 91, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.reserve-sidebar__foot {
+  margin-top: auto;
+  display: grid;
+  gap: 14px;
+}
+
+.operator-card {
+  padding: 18px;
+  border-radius: 22px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.operator-card__avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(200, 155, 91, 0.82), rgba(255, 255, 255, 0.2));
+  color: #fff;
+}
+
+.operator-card strong,
+.operator-card small {
+  display: block;
+}
+
+.operator-card small {
+  color: rgba(255, 248, 240, 0.68);
+}
+
+.reserve-main {
+  min-width: 0;
+  display: grid;
+  gap: 0;
   align-content: start;
 }
 
-.nav-link {
-  position: relative;
-  padding: 15px 16px;
-  border-radius: 20px;
-  color: var(--ink-800);
-  font-weight: 700;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.28);
-  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-}
-
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.52);
-  border-color: rgba(255, 255, 255, 0.55);
-}
-
-.nav-link.active {
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.18), rgba(255, 255, 255, 0.58));
-  border-color: rgba(15, 118, 110, 0.12);
-  color: var(--primary-strong);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-}
-
-.sidebar-foot {
-  display: grid;
-  gap: 16px;
-  margin-top: auto;
-}
-
-.profile-badge {
-  padding: 18px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.profile-label {
-  display: inline-flex;
-  margin-bottom: 10px;
-  color: var(--ink-600);
-  font-size: 0.84rem;
-}
-
-.profile-badge strong {
-  display: block;
-  font-size: 1.05rem;
-}
-
-.profile-badge span:last-child {
-  color: var(--ink-600);
-  font-size: 0.92rem;
-}
-
-.main-panel {
-  display: grid;
-  gap: 20px;
+.reserve-content {
   min-width: 0;
-}
-
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  align-items: center;
-  padding: 22px 24px;
-}
-
-.topbar h2 {
-  margin: 8px 0 0;
-  font-size: 1.85rem;
-  letter-spacing: -0.05em;
-}
-
-.topbar-copy {
-  margin: 10px 0 0;
-  color: var(--ink-600);
-}
-
-.topbar-meta {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.subtle {
-  background: var(--accent-soft);
-  color: #b45309;
-  border-color: rgba(245, 158, 11, 0.12);
-}
-
-.view-slot {
   padding-bottom: 20px;
 }
 
-@media (max-width: 1024px) {
-  .layout-grid {
+@media (max-width: 1360px) {
+  .reserve-layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 980px) {
+  .reserve-layout {
     grid-template-columns: 1fr;
   }
 
-  .sidebar {
-    position: relative;
-    top: 0;
+  .reserve-sidebar {
+    position: static;
     min-height: auto;
   }
 }
 
-@media (max-width: 640px) {
-  .layout-grid {
-    padding: 12px;
-  }
-
-  .sidebar,
-  .topbar {
-    padding: 18px;
-  }
-
-  .topbar {
-    flex-direction: column;
-    align-items: flex-start;
+@media (max-width: 720px) {
+  .reserve-layout {
+    padding: 14px;
   }
 }
 </style>

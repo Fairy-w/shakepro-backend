@@ -38,58 +38,62 @@ async function submit() {
 <template>
   <div class="login-page">
     <section class="login-brand">
-      <p class="eyebrow">SHAKEPRO LOUNGE</p>
-      <h1>把酒单、材料和收藏整理成一块清爽的玻璃面板。</h1>
-      <p class="intro">进入工作台后，你可以统一查看成员数据、维护配方内容，并快速处理用户收藏。</p>
-      <div class="brand-grid">
-        <article class="brand-card">
+      <p class="login-eyebrow">ShakePro Lounge</p>
+      <h1>用一块天鹅绒般的运营面板，打理你的鸡尾酒库、材料库与 AI 工作流。</h1>
+      <p class="login-intro">
+        这不是普通后台，而是一套面向精品鸡尾酒内容、用户偏好与自动化导入流程的旗舰工作台。
+      </p>
+
+      <div class="brand-highlights">
+        <article class="brand-tile">
           <span>01</span>
-          <strong>经营概览</strong>
-          <p>快速掌握用户、酒单、材料和收藏的当前规模。</p>
+          <strong>今日运营叙事</strong>
+          <p>先看到当天最该处理的酒单、材料、收藏和异常任务。</p>
         </article>
-        <article class="brand-card">
+        <article class="brand-tile">
           <span>02</span>
-          <strong>酒单维护</strong>
-          <p>直接更新配方、步骤、图片与酒精度，让展示保持一致。</p>
+          <strong>精品酒单编辑</strong>
+          <p>图片、风味、步骤与服务建议统一收束在一个高质感编辑体验里。</p>
         </article>
-        <article class="brand-card">
+        <article class="brand-tile">
           <span>03</span>
-          <strong>收藏回看</strong>
-          <p>查看用户保存的调酒灵感，及时整理或清理不需要的内容。</p>
+          <strong>AI 流程中枢</strong>
+          <p>抓取、提取、批量导入与异常回放像控制台一样清晰展开。</p>
         </article>
       </div>
     </section>
 
     <section class="login-panel card">
-      <div class="panel-head">
-        <p class="eyebrow darker">欢迎登录</p>
-        <h2>进入酒饮工作台</h2>
-        <p>使用你的管理账号登录后，就可以开始整理内容。</p>
+      <div class="login-panel__glass"></div>
+      <div class="login-panel__content">
+        <p class="login-eyebrow darker">Velvet Reserve</p>
+        <h2>进入酒廊运营中枢</h2>
+        <p class="login-panel__copy">使用管理账号登录后，即可继续维护内容资产并推进当日任务。</p>
+
+        <form class="login-form" @submit.prevent="submit">
+          <label>
+            <span>账号</span>
+            <input v-model="form.username" class="field" type="text" autocomplete="username" placeholder="输入账号" />
+          </label>
+
+          <label>
+            <span>密码</span>
+            <input
+              v-model="form.password"
+              class="field"
+              type="password"
+              autocomplete="current-password"
+              placeholder="输入密码"
+            />
+          </label>
+
+          <p v-if="error" class="error-text" role="alert">{{ error }}</p>
+
+          <button class="button-primary submit-button" type="submit" :disabled="loading">
+            {{ loading ? '登录中...' : '进入工作台' }}
+          </button>
+        </form>
       </div>
-
-      <form class="login-form" @submit.prevent="submit">
-        <label>
-          <span>账号</span>
-          <input v-model="form.username" class="field" type="text" autocomplete="username" placeholder="输入账号" />
-        </label>
-
-        <label>
-          <span>密码</span>
-          <input
-            v-model="form.password"
-            class="field"
-            type="password"
-            autocomplete="current-password"
-            placeholder="输入密码"
-          />
-        </label>
-
-        <p v-if="error" class="error-text">{{ error }}</p>
-
-        <button class="button-primary submit-button" type="submit" :disabled="loading">
-          {{ loading ? '登录中...' : '进入工作台' }}
-        </button>
-      </form>
     </section>
   </div>
 </template>
@@ -98,123 +102,158 @@ async function submit() {
 .login-page {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: 1.18fr 0.82fr;
   gap: 28px;
-  padding: 32px;
+  padding: 28px;
 }
 
 .login-brand {
-  padding: 34px;
-  border-radius: 34px;
-  background:
-    linear-gradient(135deg, rgba(11, 93, 87, 0.84), rgba(15, 23, 42, 0.72)),
-    radial-gradient(circle at top right, rgba(125, 211, 252, 0.32), transparent 30%),
-    radial-gradient(circle at 10% 100%, rgba(245, 158, 11, 0.24), transparent 26%);
-  color: white;
-  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+  padding: 40px;
+  border-radius: 42px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  overflow: hidden;
-  position: relative;
+  color: #fff7f2;
+  background:
+    radial-gradient(circle at top right, rgba(200, 155, 91, 0.26), transparent 28%),
+    radial-gradient(circle at 0% 100%, rgba(255, 255, 255, 0.12), transparent 24%),
+    linear-gradient(140deg, rgba(74, 47, 42, 0.98), rgba(58, 38, 34, 0.98));
+  box-shadow: var(--shadow-lg);
 }
 
+.login-brand::before,
 .login-brand::after {
   content: '';
   position: absolute;
-  width: 320px;
-  height: 320px;
   border-radius: 50%;
-  right: -80px;
-  top: -120px;
-  background: rgba(255, 255, 255, 0.2);
-  filter: blur(10px);
+  pointer-events: none;
 }
 
-.eyebrow {
-  letter-spacing: 0.28em;
-  font-size: 0.72rem;
-  opacity: 0.82;
+.login-brand::before {
+  top: -80px;
+  right: -40px;
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.08);
+  filter: blur(12px);
+}
+
+.login-brand::after {
+  bottom: -110px;
+  left: -30px;
+  width: 280px;
+  height: 280px;
+  background: rgba(200, 155, 91, 0.14);
+  filter: blur(26px);
+}
+
+.login-eyebrow {
   margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
+.login-brand h1 {
+  margin: 18px 0 0;
+  font-size: clamp(3rem, 5vw, 5.6rem);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  max-width: 820px;
+}
+
+.login-intro {
+  margin: 22px 0 0;
+  max-width: 620px;
+  color: rgba(255, 247, 242, 0.78);
+  font-size: 1.04rem;
+}
+
+.brand-highlights {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.brand-tile {
+  position: relative;
+  z-index: 1;
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px);
+}
+
+.brand-tile span {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-bottom: 18px;
+  font-family: var(--font-mono);
+  background: rgba(200, 155, 91, 0.2);
+}
+
+.brand-tile strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1.04rem;
+}
+
+.brand-tile p {
+  margin: 0;
+  color: rgba(255, 247, 242, 0.72);
+}
+
+.login-panel {
+  position: relative;
+  align-self: center;
+  overflow: hidden;
+  padding: 0;
+}
+
+.login-panel__glass {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(200, 155, 91, 0.14), transparent 24%),
+    radial-gradient(circle at 100% 0%, rgba(122, 73, 63, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.34));
+}
+
+.login-panel__content {
+  position: relative;
+  z-index: 1;
+  padding: 34px;
 }
 
 .darker {
   color: var(--ink-600);
 }
 
-.login-brand h1 {
-  font-size: clamp(2.5rem, 4vw, 4.8rem);
-  line-height: 0.95;
-  letter-spacing: -0.05em;
-  margin: 18px 0 0;
-  max-width: 720px;
-}
-
-.intro {
-  margin-top: 18px;
-  font-size: 1.04rem;
-  max-width: 560px;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.brand-grid {
-  margin-top: 36px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-}
-
-.brand-card {
-  padding: 18px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.brand-card span {
-  display: inline-flex;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 18px;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.brand-card strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 1.08rem;
-}
-
-.brand-card p,
-.panel-head p {
-  color: rgba(255, 255, 255, 0.78);
-}
-
-.login-panel {
-  align-self: center;
-  padding: 30px;
-  background: linear-gradient(180deg, rgba(253, 255, 255, 0.88), rgba(240, 246, 250, 0.76));
-}
-
-.panel-head h2 {
-  font-size: 2rem;
+.login-panel__content h2 {
+  margin: 14px 0 8px;
+  font-size: 2.35rem;
+  line-height: 0.98;
   letter-spacing: -0.04em;
-  margin: 12px 0 6px;
 }
 
-.panel-head p {
+.login-panel__copy {
+  margin: 0;
   color: var(--ink-600);
 }
 
 .login-form {
+  margin-top: 30px;
   display: grid;
   gap: 18px;
-  margin-top: 28px;
 }
 
 .login-form label {
@@ -226,21 +265,20 @@ async function submit() {
 
 .submit-button {
   width: 100%;
-  padding: 14px 18px;
 }
 
 .error-text {
-  color: var(--danger);
-  font-weight: 600;
   margin: 0;
+  color: var(--danger);
+  font-weight: 700;
 }
 
-@media (max-width: 1040px) {
+@media (max-width: 1120px) {
   .login-page {
     grid-template-columns: 1fr;
   }
 
-  .brand-grid {
+  .brand-highlights {
     grid-template-columns: 1fr;
   }
 }
@@ -251,8 +289,8 @@ async function submit() {
   }
 
   .login-brand,
-  .login-panel {
-    padding: 22px;
+  .login-panel__content {
+    padding: 24px;
   }
 }
 </style>

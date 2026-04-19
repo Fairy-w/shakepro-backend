@@ -24,6 +24,18 @@ public class Material {
     @Column(length = 50)
     private String category;
 
+    @Column(name = "name_en", length = 120)
+    private String nameEn;
+
+    @Column(name = "image_url", length = 512)
+    private String imageUrl;
+
+    @Column(length = 32)
+    private String source;
+
+    @Column(name = "source_id", length = 64)
+    private String sourceId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

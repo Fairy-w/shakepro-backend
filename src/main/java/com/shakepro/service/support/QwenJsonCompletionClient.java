@@ -7,6 +7,7 @@ import com.shakepro.common.result.ErrorCode;
 import com.shakepro.config.AiQwenConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -23,6 +24,7 @@ import java.util.Map;
 public class QwenJsonCompletionClient {
 
     private final AiQwenConfig aiQwenConfig;
+    @Qualifier("aiHttpClient")
     private final HttpClient aiHttpClient;
     private final ObjectMapper objectMapper;
 

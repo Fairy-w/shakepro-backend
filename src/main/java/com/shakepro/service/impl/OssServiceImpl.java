@@ -2,31 +2,33 @@ package com.shakepro.service.impl;
 
 import com.shakepro.common.exception.BusinessException;
 import com.shakepro.common.result.ErrorCode;
-import com.shakepro.config.MinioConfig;
+import com.aliyun.oss.HttpMethod;
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.GeneratePresignedUrlRequest;
+import com.shakepro.config.OssConfig;
 import com.shakepro.dto.request.FileRecordRequest;
 import com.shakepro.dto.request.PresignRequest;
 import com.shakepro.dto.response.PresignResponse;
 import com.shakepro.entity.FileRecord;
 import com.shakepro.repository.FileRecordRepository;
 import com.shakepro.service.OssService;
-import io.minio.GetPresignedObjectUrlArgs;
-import io.minio.MinioClient;
-import io.minio.http.Method;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.net.URL;
+import java.time.Instant;
+import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OssServiceImpl implements OssService {
 
-    private final MinioClient minioClient;
-    private final MinioConfig minioConfig;
+    private final OSS ossClient;
+    private final OssConfig ossConfig;
     private final FileRecordRepository fileRecordRepository;
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
@@ -50,23 +52,23 @@ public class OssServiceImpl implements OssService {
         try {
             String extension = getFileExtension(request.getFilename());
             String objectKey = generateObjectKey(userId, extension);
-            int expireSeconds = minioConfig.getPresignExpireSeconds();
+            int expireSeconds = ossConfig.getEffectivePresignExpireSeconds();
+            Date expiration = Date.from(Instant.now().plusSeconds(expireSeconds));
 
-            String uploadUrl = minioClient.getPresignedObjectUrl(
-                    GetPresignedObjectUrlArgs.builder()
-                            .method(Method.PUT)
-                            .bucket(minioConfig.getBucket())
-                            .object(objectKey)
-                            .expiry(expireSeconds, TimeUnit.SECONDS)
-                            .build()
+            GeneratePresignedUrlRequest presignedRequest = new GeneratePresignedUrlRequest(
+                    ossConfig.getNormalizedBucket(),
+                    objectKey,
+                    HttpMethod.PUT
             );
+            presignedRequest.setExpiration(expiration);
+            URL uploadUrl = ossClient.generatePresignedUrl(presignedRequest);
 
-            String publicUrl = minioConfig.getPublicBaseUrl() + "/" + objectKey;
+            String publicUrl = ossConfig.getNormalizedPublicBaseUrl() + "/" + objectKey;
 
             log.info("Generated presign URL for user={}, objectKey={}", userId, objectKey);
 
             return PresignResponse.builder()
-                    .uploadUrl(uploadUrl)
+                    .uploadUrl(uploadUrl.toString())
                     .objectKey(objectKey)
                     .publicUrl(publicUrl)
                     .expireSeconds(expireSeconds)

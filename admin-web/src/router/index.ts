@@ -17,8 +17,10 @@ const routes: RouteRecordRaw[] = [
       { path: 'users', name: 'users', component: () => import('@/views/admin/Users.vue') },
       { path: 'favorites', name: 'favorites', component: () => import('@/views/admin/Favorites.vue') },
       { path: 'materials', name: 'materials', component: () => import('@/views/admin/Materials.vue') },
+      { path: 'user-materials', name: 'user-materials', component: () => import('@/views/admin/UserMaterials.vue') },
       { path: 'cocktails', name: 'cocktails', component: () => import('@/views/admin/Cocktails.vue') },
       { path: 'crawler', name: 'crawler', component: () => import('@/views/admin/PageCrawler.vue') },
+      { path: 'crawler-batch', name: 'crawler-batch', component: () => import('@/views/admin/BatchCrawler.vue') },
     ],
   },
 ]
