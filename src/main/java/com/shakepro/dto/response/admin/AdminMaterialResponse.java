@@ -13,6 +13,13 @@ public class AdminMaterialResponse {
     private Long id;
     private String name;
     private String category;
+    private String nameEn;
+    private String imageUrl;
+    private String imageUrlThumb;
+    private String imageUrlCard;
+    private String imageUrlDetail;
+    private String source;
+    private String sourceId;
     private LocalDateTime createdAt;
 
     public static AdminMaterialResponse from(Material material) {
@@ -20,6 +27,10 @@ public class AdminMaterialResponse {
                 .id(material.getId())
                 .name(material.getName())
                 .category(material.getCategory())
+                .nameEn(material.getNameEn())
+                .imageUrl(material.getImageUrl())
+                .source(material.getSource())
+                .sourceId(material.getSourceId())
                 .createdAt(material.getCreatedAt())
                 .build();
     }

@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { adminApi, type AdminUser, type PageResult } from '@/api/admin'
+import AdminMetricCard from '@/components/admin/AdminMetricCard.vue'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import AdminPagination from '@/components/admin/AdminPagination.vue'
+import AdminToolbar from '@/components/admin/AdminToolbar.vue'
 
 const keyword = ref('')
 const loading = ref(false)
@@ -11,6 +15,9 @@ const pageData = ref<PageResult<AdminUser>>({
   size: 10,
   number: 0,
 })
+
+const enabledCount = computed(() => pageData.value.content.filter((user) => user.enabled).length)
+const adminCount = computed(() => pageData.value.content.filter((user) => ['ADMIN', 'SUPER_ADMIN'].includes(user.role)).length)
 
 async function loadUsers(nextPage = 0) {
   loading.value = true
@@ -29,22 +36,29 @@ onMounted(() => loadUsers())
 </script>
 
 <template>
-  <section>
-    <div class="page-head">
-      <div>
-        <h1 class="page-title">用户管理</h1>
-        <p class="page-subtitle">查看账号信息、角色状态与创建时间，快速核对成员结构和账号启用情况。</p>
-      </div>
-      <span class="badge">已收录 {{ pageData.totalElements }} 位用户</span>
+  <section class="page-stack users-page">
+    <AdminPageHeader
+      eyebrow="Members"
+      title="用户管理"
+      subtitle="查看账号结构、角色状态与创建时间，确保运营侧的成员结构和权限分布始终清晰。"
+    >
+      <template #meta>
+        <span class="badge">已收录 {{ pageData.totalElements }} 位用户</span>
+      </template>
+    </AdminPageHeader>
+
+    <div class="dual-grid">
+      <AdminMetricCard eyebrow="当前页" label="启用账号" :value="enabledCount" hint="优先关注已启用成员的使用情况。" />
+      <AdminMetricCard eyebrow="角色" label="管理账号" :value="adminCount" hint="包括 ADMIN 与 SUPER_ADMIN。" tone="warm" />
     </div>
 
-    <div class="toolbar">
+    <AdminToolbar>
       <input v-model="keyword" class="field search" type="text" placeholder="按用户名或昵称搜索" @keyup.enter="loadUsers()" />
       <button class="button-primary" :disabled="loading" @click="loadUsers()">{{ loading ? '查询中...' : '搜索' }}</button>
-    </div>
+    </AdminToolbar>
 
     <div class="card table-card">
-      <table>
+      <table class="table-base">
         <thead>
           <tr>
             <th>ID</th>
@@ -57,12 +71,12 @@ onMounted(() => loadUsers())
         </thead>
         <tbody>
           <tr v-for="user in pageData.content" :key="user.id">
-            <td>#{{ user.id }}</td>
+            <td class="mono">#{{ user.id }}</td>
             <td>{{ user.username }}</td>
             <td>{{ user.nickname || '-' }}</td>
             <td>{{ user.role }}</td>
             <td>
-              <span class="status" :class="{ disabled: !user.enabled }">
+              <span class="status-pill" :class="user.enabled ? 'success' : 'danger'">
                 {{ user.enabled ? '启用' : '禁用' }}
               </span>
             </td>
@@ -75,95 +89,23 @@ onMounted(() => loadUsers())
       </table>
     </div>
 
-    <div class="pager">
-      <button class="button-secondary" :disabled="pageData.number <= 0 || loading" @click="loadUsers(pageData.number - 1)">上一页</button>
-      <span>第 {{ pageData.number + 1 }} / {{ Math.max(pageData.totalPages, 1) }} 页</span>
-      <button
-        class="button-secondary"
-        :disabled="pageData.number + 1 >= pageData.totalPages || loading || !pageData.totalPages"
-        @click="loadUsers(pageData.number + 1)"
-      >
-        下一页
-      </button>
-    </div>
+    <AdminPagination
+      :page="pageData.number"
+      :total-pages="pageData.totalPages"
+      :loading="loading"
+      @prev="loadUsers(pageData.number - 1)"
+      @next="loadUsers(pageData.number + 1)"
+    />
   </section>
 </template>
 
 <style scoped>
+.users-page {
+  display: grid;
+  gap: 18px;
+}
+
 .search {
-  max-width: 320px;
-}
-
-.table-card {
-  overflow: hidden;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(243, 248, 251, 0.68));
-}
-
-th,
-td {
-  padding: 16px 18px;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-}
-
-th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  font-size: 0.86rem;
-  letter-spacing: 0.1em;
-  color: var(--ink-600);
-  background: rgba(241, 247, 250, 0.96);
-  backdrop-filter: blur(16px);
-}
-
-tbody tr {
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-
-tbody tr:hover {
-  background: rgba(255, 255, 255, 0.48);
-}
-
-.status {
-  display: inline-flex;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(22, 163, 74, 0.12);
-  color: var(--success);
-  font-weight: 700;
-}
-
-.status.disabled {
-  background: rgba(220, 38, 38, 0.1);
-  color: var(--danger);
-}
-
-.empty {
-  text-align: center;
-  color: var(--ink-600);
-}
-
-.pager {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  margin-top: 18px;
-}
-
-@media (max-width: 900px) {
-  .table-card {
-    overflow-x: auto;
-  }
-
-  .pager {
-    flex-direction: column;
-  }
-
-  th {
-    top: auto;
-    position: static;
-  }
+  max-width: 340px;
 }
 </style>

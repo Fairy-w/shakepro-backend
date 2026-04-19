@@ -15,8 +15,10 @@ public enum ErrorCode {
     SERVER_ERROR(50000, "服务端异常"),
     AI_ERROR(50010, "AI调用失败"),
     OSS_ERROR(50020, "OSS预签名失败"),
+    BARCODE_LOOKUP_FAILED(50030, "条码识别失败"),
     FILE_TYPE_NOT_ALLOWED(40004, "不允许的文件类型"),
-    FILE_SIZE_EXCEEDED(40005, "文件大小超出限制");
+    FILE_SIZE_EXCEEDED(40005, "文件大小超出限制"),
+    BARCODE_NOT_FOUND(40410, "未识别到商品信息");
 
     private final int code;
     private final String message;

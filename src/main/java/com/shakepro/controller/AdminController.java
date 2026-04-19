@@ -2,22 +2,35 @@ package com.shakepro.controller;
 
 import com.shakepro.common.result.ApiResponse;
 import com.shakepro.dto.request.admin.AdminCocktailSaveRequest;
+import com.shakepro.dto.request.admin.AdminGeneratedCocktailSaveRequest;
 import com.shakepro.dto.request.admin.AdminMaterialSaveRequest;
 import com.shakepro.dto.request.admin.AdminPageAiGenerateRequest;
+import com.shakepro.dto.request.admin.AdminPageBatchImportRequest;
 import com.shakepro.dto.request.admin.AdminPageCrawlRequest;
 import com.shakepro.dto.request.admin.AdminPageFieldExtractRequest;
+import com.shakepro.dto.request.admin.AdminMaterialSyncRequest;
+import com.shakepro.dto.response.UserMaterialResponse;
+import com.shakepro.dto.response.admin.AdminBatchImportHistoryResponse;
+import com.shakepro.dto.response.admin.AdminBatchImportJobStartResponse;
+import com.shakepro.dto.response.admin.AdminBatchImportJobStatusResponse;
 import com.shakepro.dto.response.admin.AdminAiCocktailFavoriteResponse;
 import com.shakepro.dto.response.admin.AdminCocktailDetailResponse;
 import com.shakepro.dto.response.admin.AdminCocktailListResponse;
 import com.shakepro.dto.response.admin.AdminDashboardResponse;
 import com.shakepro.dto.response.admin.AdminMaterialResponse;
+import com.shakepro.dto.response.admin.AdminMaterialSyncResponse;
+import com.shakepro.dto.response.admin.AdminPageBatchImportResponse;
 import com.shakepro.dto.response.admin.AdminPageExtractFieldsResponse;
+import com.shakepro.dto.response.admin.AdminPageResult;
 import com.shakepro.dto.response.admin.AdminPageTextResponse;
 import com.shakepro.dto.response.admin.AdminUserResponse;
 import com.shakepro.service.AdminPageAiGenerateService;
+import com.shakepro.service.AdminPageBatchImportService;
 import com.shakepro.service.AdminPageCrawlService;
 import com.shakepro.service.AdminPageExtractService;
 import com.shakepro.service.AdminService;
+import com.shakepro.service.AdminMaterialSyncService;
+import com.shakepro.service.AdminUserMaterialManageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -45,6 +58,9 @@ public class AdminController {
     private final AdminPageCrawlService adminPageCrawlService;
     private final AdminPageExtractService adminPageExtractService;
     private final AdminPageAiGenerateService adminPageAiGenerateService;
+    private final AdminPageBatchImportService adminPageBatchImportService;
+    private final AdminUserMaterialManageService adminUserMaterialManageService;
+    private final AdminMaterialSyncService adminMaterialSyncService;
 
     @Operation(summary = "后台仪表盘")
     @GetMapping("/dashboard")
@@ -99,13 +115,36 @@ public class AdminController {
         return ApiResponse.success();
     }
 
+    @Operation(summary = "同步TheCocktailDB基础材料到本地并上传图片到OSS")
+    @PostMapping("/materials/sync/cocktaildb")
+    public ApiResponse<AdminMaterialSyncResponse> syncMaterialsFromCocktailDb(
+            @RequestBody(required = false) AdminMaterialSyncRequest request) {
+        return ApiResponse.success(adminMaterialSyncService.syncFromCocktailDb(request));
+    }
+
+    @Operation(summary = "管理员获取指定用户材料列表")
+    @GetMapping("/user-materials")
+    public ApiResponse<List<UserMaterialResponse>> userMaterials(
+            @RequestParam Long userId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String categoryId) {
+        return ApiResponse.success(adminUserMaterialManageService.list(userId, keyword, categoryId));
+    }
+
     @Operation(summary = "鸡尾酒分页列表")
     @GetMapping("/cocktails")
     public ApiResponse<Page<AdminCocktailListResponse>> cocktails(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ApiResponse.success(adminService.listCocktails(keyword, page, size));
+        return ApiResponse.success(adminService.listCocktails(keyword, category, page, size));
+    }
+
+    @Operation(summary = "鸡尾酒分类列表")
+    @GetMapping("/cocktails/categories")
+    public ApiResponse<List<String>> cocktailCategories() {
+        return ApiResponse.success(adminService.listCocktailCategories());
     }
 
     @Operation(summary = "鸡尾酒详情")
@@ -121,12 +160,27 @@ public class AdminController {
         return ApiResponse.success(adminService.createCocktail(request));
     }
 
+    @Operation(summary = "新增规范化鸡尾酒")
+    @PostMapping("/cocktails/generated")
+    public ApiResponse<AdminCocktailDetailResponse> createGeneratedCocktail(
+            @Valid @RequestBody AdminGeneratedCocktailSaveRequest request) {
+        return ApiResponse.success(adminService.createGeneratedCocktail(request));
+    }
+
     @Operation(summary = "修改鸡尾酒")
     @PutMapping("/cocktails/{id}")
     public ApiResponse<AdminCocktailDetailResponse> updateCocktail(
             @PathVariable Long id,
             @Valid @RequestBody AdminCocktailSaveRequest request) {
         return ApiResponse.success(adminService.updateCocktail(id, request));
+    }
+
+    @Operation(summary = "修改规范化鸡尾酒")
+    @PutMapping("/cocktails/generated/{id}")
+    public ApiResponse<AdminCocktailDetailResponse> updateGeneratedCocktail(
+            @PathVariable Long id,
+            @Valid @RequestBody AdminGeneratedCocktailSaveRequest request) {
+        return ApiResponse.success(adminService.updateGeneratedCocktail(id, request));
     }
 
     @Operation(summary = "删除鸡尾酒")
@@ -159,5 +213,31 @@ public class AdminController {
     @PostMapping("/crawl/generate-fields")
     public ApiResponse<AdminPageExtractFieldsResponse> generateFields(@Valid @RequestBody AdminPageAiGenerateRequest request) {
         return ApiResponse.success(adminPageAiGenerateService.generateChineseFields(request.toExtractedResponse()));
+    }
+
+    @Operation(summary = "从列表页批量抓取详情并提取字段")
+    @PostMapping("/crawl/import-from-list")
+    public ApiResponse<AdminPageBatchImportResponse> importFromList(@Valid @RequestBody AdminPageBatchImportRequest request) {
+        return ApiResponse.success(adminPageBatchImportService.importFromList(request));
+    }
+
+    @Operation(summary = "创建批量抓取任务（异步）")
+    @PostMapping("/crawl/import-from-list/jobs")
+    public ApiResponse<AdminBatchImportJobStartResponse> startImportJob(@Valid @RequestBody AdminPageBatchImportRequest request) {
+        return ApiResponse.success(adminPageBatchImportService.startImportJob(request));
+    }
+
+    @Operation(summary = "查询批量抓取任务状态")
+    @GetMapping("/crawl/import-from-list/jobs/{jobId}")
+    public ApiResponse<AdminBatchImportJobStatusResponse> importJobStatus(@PathVariable String jobId) {
+        return ApiResponse.success(adminPageBatchImportService.getImportJobStatus(jobId));
+    }
+
+    @Operation(summary = "批量抓取执行历史")
+    @GetMapping("/crawl/import-histories")
+    public ApiResponse<AdminPageResult<AdminBatchImportHistoryResponse>> importHistories(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.success(adminPageBatchImportService.listImportHistories(page, size));
     }
 }

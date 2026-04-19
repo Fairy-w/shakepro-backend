@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS `user_material_inventory` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `user_id` BIGINT NOT NULL,
+    `material_id` BIGINT DEFAULT NULL COMMENT '匹配到的标准材料ID',
+    `product_key` VARCHAR(128) NOT NULL COMMENT '商品标识，用于前端渲染',
+    `source` VARCHAR(32) NOT NULL DEFAULT 'scan' COMMENT '来源，如 scan/manual',
+    `source_label` VARCHAR(64) DEFAULT NULL COMMENT '来源展示名',
+    `name` VARCHAR(255) NOT NULL COMMENT '商品名称',
+    `subtitle` VARCHAR(255) DEFAULT NULL COMMENT '副标题',
+    `brand` VARCHAR(120) DEFAULT NULL COMMENT '品牌',
+    `category_id` VARCHAR(64) DEFAULT NULL COMMENT '前端分类ID',
+    `barcode` VARCHAR(32) NOT NULL COMMENT '标准化条码，仅数字',
+    `capacity_text` VARCHAR(64) DEFAULT NULL COMMENT '容量文案',
+    `remain_level` VARCHAR(32) NOT NULL DEFAULT 'full' COMMENT '余量，如 full/2/3/1/3',
+    `opened` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否开封',
+    `has_item` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否在家中有此物料',
+    `tags_json` TEXT DEFAULT NULL COMMENT '标签JSON数组',
+    `note` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    `badge` VARCHAR(16) DEFAULT NULL COMMENT '徽标文本',
+    `accent_color` VARCHAR(16) DEFAULT NULL COMMENT '主色',
+    `soft_color` VARCHAR(16) DEFAULT NULL COMMENT '辅色',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_material_inventory_user_barcode` (`user_id`, `barcode`),
+    KEY `idx_user_material_inventory_user_updated_at` (`user_id`, `updated_at`),
+    KEY `idx_user_material_inventory_material_id` (`material_id`),
+    CONSTRAINT `fk_user_material_inventory_user`
+        FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_user_material_inventory_material`
+        FOREIGN KEY (`material_id`) REFERENCES `materials`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

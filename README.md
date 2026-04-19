@@ -29,6 +29,8 @@ ShakePro 鸡尾酒应用后端服务，提供用户认证、鸡尾酒与材料�
 - 后台体系：管理员登录、仪表盘、用户管理、材料管理、鸡尾酒管理
 - 鸡尾酒：分页查询、详情、轮播、分类
 - 材料：列表与分类
+- 条码识别：扫码识别商品并映射材料
+- 用户材料库：按用户维护材料库存状态
 - 收藏：新增、取消、列表
 - 文件上传：MinIO 预签名 URL + 文件记录落库
 - AI 推荐：支持 `mock` / 外部 AI Provider（预留推荐算法）
@@ -85,6 +87,12 @@ mvn spring-boot:run
 ```bash
 mvn -Dspring-boot.run.profiles=dev spring-boot:run
 ```
+
+说明：
+
+- 项目会自动加载项目根目录 `.env`（等价于 `spring.config.import=optional:file:.env[.properties]`）
+- 可在 `.env` 中用 `SPRING_PROFILES_ACTIVE` 控制运行环境（例如 `dev` / `prod`）
+- 使用 IDEA 启动时，请确认 Run Configuration 的 Working directory 是项目根目录，否则可能找不到 `.env`
 
 ### 3) 验证
 
@@ -182,6 +190,7 @@ java -jar target/shakepro-backend-1.0.0-SNAPSHOT.jar --spring.profiles.active=pr
 | GET | `/api/admin/auth/me` | 管理员 | 获取当前管理员信息 |
 | GET | `/api/admin/dashboard` | 管理员 | 仪表盘统计 |
 | GET | `/api/admin/users` | 管理员 | 用户分页列表 |
+| GET | `/api/admin/user-materials` | 管理员 | 指定用户材料列表（只读分析） |
 | GET | `/api/admin/materials` | 管理员 | 材料列表 |
 | POST | `/api/admin/materials` | 管理员 | 新增材料 |
 | PUT | `/api/admin/materials/{id}` | 管理员 | 修改材料 |
@@ -244,11 +253,37 @@ java -jar target/shakepro-backend-1.0.0-SNAPSHOT.jar --spring.profiles.active=pr
 - `/api/ai/generate-recipe-by-text` 调用 `${ai.qwen.base-url}/services/aigc/text-generation/generation`
 - 配方生成接口返回的 `steps` 为数组类型（`string[]`）
 
+### 8) 条码识别与用户材料库
+
+| 方法 | 路径 | 鉴权 | 说明 |
+| --- | --- | --- | --- |
+| POST | `/api/barcodes/lookup` | 是 | 条码识别，返回业务字段（不落库） |
+| POST | `/api/user-materials` | 是 | 保存/更新当前用户的扫码材料 |
+| POST | `/api/user-materials/manual` | 是 | 手动新增/更新用户材料（按 `materialId`） |
+| POST | `/api/user-materials/manual/batch` | 是 | 批量手动新增/更新用户材料 |
+| GET | `/api/user-materials` | 是 | 获取当前用户材料列表（支持 `keyword` `categoryId`） |
+| DELETE | `/api/user-materials/{barcode}` | 是 | 按条码删除当前用户材料 |
+
+- `lookup` 会优先读取用户已有库存，再使用条码缓存，最后调用 Open Food Facts 查询
+- 用户材料库按 `(user_id, barcode)` 幂等更新
+- Web 管理端仅保留 `GET /api/admin/user-materials` 用于画像分析，写接口已下线
+- `materials` / `user-materials` / `barcodes/lookup` 已支持材料图片字段：`imageUrl`、`imageUrlThumb`、`imageUrlCard`、`imageUrlDetail`
+- 用户材料接口仅返回业务字段，文案/样式字段由前端维护
+- 条码识别失败时返回 `40410`（未识别）或 `50030`（上游异常）
+
 ## 文件上传调用流程（前端建议）
 
 1. 调用 `POST /api/oss/presign` 获取 `uploadUrl`、`objectKey`、`publicUrl`
 2. 前端直接 `PUT uploadUrl` 上传文件到 MinIO
 3. 调用 `POST /api/files` 持久化文件信息（`objectKey`、`url` 等）
+
+### AI 生成鸡尾酒主图自动转存 OSS
+
+- 当调用后台 `POST /api/admin/cocktails/generated` 或 `PUT /api/admin/cocktails/generated/{id}` 保存到数据库时：
+  - 如果 `heroImage` 已是当前 OSS `public-base-url` 下地址，则直接复用
+  - 如果 `heroImage` 是外部 `http/https` 图片链接，则后端会自动下载并转存到 OSS，再写入转存后的 URL
+- 批量抓取自动入库（`/api/admin/crawl/import-from-list`，`autoSave=true`）同样复用该逻辑
+- 自动转存失败时会保留原始 `heroImage`，并输出日志告警，避免阻塞入库
 
 ## 环境变量说明
 
@@ -263,6 +298,7 @@ java -jar target/shakepro-backend-1.0.0-SNAPSHOT.jar --spring.profiles.active=pr
 | `REDIS_HOST` | Redis 地址 |
 | `REDIS_PORT` | Redis 端口 |
 | `REDIS_PASSWORD` | Redis 密码（可空） |
+| `SPRING_PROFILES_ACTIVE` | Spring Profile（`dev`/`prod`，默认 `dev`） |
 | `JWT_SECRET` | JWT 密钥（建议 32+ 字节） |
 | `AI_PROVIDER` | AI 提供商（`mock`/`openai` 等） |
 | `AI_BASE_URL` | AI 网关地址 |
@@ -273,6 +309,11 @@ java -jar target/shakepro-backend-1.0.0-SNAPSHOT.jar --spring.profiles.active=pr
 | `QWEN_API_KEY` | DashScope Key |
 | `QWEN_MODEL` | 通义千问模型名 |
 | `QWEN_TIMEOUT` | DashScope 超时（毫秒） |
+| `BARCODE_LOOKUP_ENABLED` | 是否启用条码识别（`true/false`） |
+| `BARCODE_BASE_URL` | 条码查询网关地址（默认 Open Food Facts） |
+| `BARCODE_TIMEOUT` | 条码查询超时（毫秒） |
+| `BARCODE_CACHE_HOURS` | 条码缓存有效期（小时） |
+| `BARCODE_USER_AGENT` | 条码查询请求的 User-Agent |
 
 ### `dev` 默认值（application-dev.yml）
 
@@ -292,6 +333,10 @@ java -jar target/shakepro-backend-1.0.0-SNAPSHOT.jar --spring.profiles.active=pr
 | `QWEN_BASE_URL` | `https://dashscope.aliyuncs.com/api/v1` |
 | `QWEN_MODEL` | `qwen-plus` |
 | `QWEN_TIMEOUT` | `15000` |
+| `BARCODE_LOOKUP_ENABLED` | `true` |
+| `BARCODE_BASE_URL` | `https://world.openfoodfacts.org` |
+| `BARCODE_TIMEOUT` | `3500` |
+| `BARCODE_CACHE_HOURS` | `168` |
 
 `dev` 下 OSS 使用以下环境变量：
 
@@ -325,6 +370,13 @@ Flyway 自动执行：
 - `V2__seed.sql`：初始测试数据（用户/鸡尾酒/材料）
 - `V3__admin_support.sql`：管理员角色字段与初始 admin
 - `V4__reset_admin_password.sql`：重置 admin 密码与状态
+- `V5~V10`：AI 收藏、内容结构化与材料规范化
+- `V11__create_barcode_product_cache.sql`：条码商品缓存
+- `V12__create_user_material_inventory.sql`：用户材料库存
+- `V13__create_material_aliases.sql`：材料别名与条码映射基础
+- `V14~V16`：抓取批次导入历史与统计字段
+- `V17__align_user_materials_contract.sql`：用户材料表对齐新契约（重命名与字段精简）
+- `V18__rename_user_materials_constraints.sql`：用户材料表索引与外键命名统一
 
 ## 开发调试建议
 

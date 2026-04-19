@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS `barcode_product_cache` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `barcode` VARCHAR(32) NOT NULL COMMENT '标准化条码，仅数字',
+    `product_key` VARCHAR(128) NOT NULL COMMENT '商品标识，用于前端渲染',
+    `source` VARCHAR(32) NOT NULL DEFAULT 'open_food_facts' COMMENT '外部数据来源',
+    `source_label` VARCHAR(64) DEFAULT NULL COMMENT '来源展示名',
+    `name` VARCHAR(255) NOT NULL COMMENT '商品名称',
+    `subtitle` VARCHAR(255) DEFAULT NULL COMMENT '副标题/提示',
+    `brand` VARCHAR(120) DEFAULT NULL COMMENT '品牌',
+    `category_id` VARCHAR(64) DEFAULT NULL COMMENT '前端分类ID',
+    `capacity_text` VARCHAR(64) DEFAULT NULL COMMENT '容量展示文案',
+    `tags_json` TEXT DEFAULT NULL COMMENT '标签JSON数组',
+    `note` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    `badge` VARCHAR(16) DEFAULT NULL COMMENT '徽标文本',
+    `accent_color` VARCHAR(16) DEFAULT NULL COMMENT '主色',
+    `soft_color` VARCHAR(16) DEFAULT NULL COMMENT '辅色',
+    `raw_payload` LONGTEXT DEFAULT NULL COMMENT '外部接口原始响应',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_barcode_product_cache_barcode` (`barcode`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

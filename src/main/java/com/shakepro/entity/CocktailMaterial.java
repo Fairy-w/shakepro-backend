@@ -23,9 +23,18 @@ public class CocktailMaterial {
     private Cocktail cocktail;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "material_id", nullable = false)
+    @JoinColumn(name = "material_id")
     private Material material;
+
+    @Column(name = "display_name", length = 255)
+    private String displayName;
 
     @Column(length = 50)
     private String amount;
+
+    @Column(length = 500)
+    private String note;
+
+    @Column(name = "sort_order", nullable = false)
+    private Integer sortOrder;
 }

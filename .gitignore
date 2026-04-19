@@ -1,0 +1,32 @@
+# Java / Maven
+/target/
+/.m2/
+.classpath
+.project
+.settings/
+
+# Frontend (Vite/Vue)
+/admin-web/node_modules/
+/admin-web/dist/
+/admin-web/.vite/
+
+# IDE / Editor
+/.idea/
+.vscode/
+*.iml
+
+# Environment / local secrets
+.env
+.env.*
+!.env.example
+
+# Runtime logs and temporary outputs
+*.log
+/spring-boot-run*.log
+/migration-reports/
+/.tmp-check-bcrypt/
+/.tmp-jshell/
+
+# Local tooling cache
+/.codex-tmp/
+env-all-export.txt

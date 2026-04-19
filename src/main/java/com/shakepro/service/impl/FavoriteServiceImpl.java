@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shakepro.common.exception.BusinessException;
 import com.shakepro.common.result.ErrorCode;
+import com.shakepro.common.util.OssImageUrlBuilder;
 import com.shakepro.dto.request.AiCocktailFavoriteCreateRequest;
 import com.shakepro.dto.response.AiCocktailFavoriteActionResponse;
 import com.shakepro.dto.response.AiCocktailFavoriteItemResponse;
@@ -47,6 +48,7 @@ public class FavoriteServiceImpl implements FavoriteService {
     private final CocktailRepository cocktailRepository;
     private final FavoriteAiCocktailRepository favoriteAiCocktailRepository;
     private final ObjectMapper objectMapper;
+    private final OssImageUrlBuilder ossImageUrlBuilder;
 
     @Override
     @Transactional
@@ -81,7 +83,7 @@ public class FavoriteServiceImpl implements FavoriteService {
     public List<CocktailListResponse> listFavorites(Long userId) {
         List<Favorite> favorites = favoriteRepository.findByUserId(userId);
         return favorites.stream()
-                .map(f -> CocktailListResponse.from(f.getCocktail()))
+                .map(f -> toCocktailListResponse(f.getCocktail()))
                 .toList();
     }
 
@@ -267,5 +269,23 @@ public class FavoriteServiceImpl implements FavoriteService {
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.SERVER_ERROR, "反序列化AI配方字段失败");
         }
+    }
+
+    private CocktailListResponse toCocktailListResponse(Cocktail cocktail) {
+        String preferredImageUrl = cocktail.getHeroImage() != null ? cocktail.getHeroImage() : cocktail.getImageUrl();
+        return CocktailListResponse.builder()
+                .id(cocktail.getId())
+                .name(cocktail.getName())
+                .englishName(cocktail.getEnglishName())
+                .category(cocktail.getCategory())
+                .heroImage(cocktail.getHeroImage())
+                .difficulty(cocktail.getDifficulty())
+                .abv(cocktail.getAbv())
+                .imageUrl(preferredImageUrl)
+                .imageUrlThumb(ossImageUrlBuilder.toThumbUrl(preferredImageUrl))
+                .imageUrlCard(ossImageUrlBuilder.toCardUrl(preferredImageUrl))
+                .description(cocktail.getDescription())
+                .alcoholLevel(cocktail.getAlcoholLevel())
+                .build();
     }
 }

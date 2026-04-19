@@ -71,12 +71,21 @@ public class AdminPageAiGenerateServiceImpl implements AdminPageAiGenerateServic
                    其中 amount 尽量沿用原始用量文本；note 是材料补充说明，用来解释这个材料为什么用、怎么选、要注意什么。
                 6. steps 必须返回数组对象，元素结构为 { "title": "...", "detail": "..." }。
                 7. englishName 尽量保留英文原名；如果原始 name 是英文且 englishName 缺失，可把原始英文名填入 englishName。
-                8. 如果确实无法可靠补充某字段，可返回 null、[] 或 {}，不要输出解释文字。
-                9. serviceNotes 必须返回字符串数组，每一项是一条服务或调制备注；如果没有可返回 []。
-                10. 只返回 JSON 对象，不要输出 Markdown 代码块，不要输出额外说明。
-                11. 以下字段必须返回字符串或 null，绝不能返回数组或对象：
+                8. category 必须按以下规则二选一地精确归类，且只能输出以下 8 个值之一：
+                   - 金酒：主基酒是金酒
+                   - 伏特加：主基酒是伏特加
+                   - 朗姆：主基酒是朗姆
+                   - 龙舌兰：主基酒是龙舌兰
+                   - 威士忌：主基酒是威士忌
+                   - 白兰地：主基酒是白兰地或干邑
+                   - 利口酒：主导酒体是利口酒，或不方便归到上述基酒类
+                   - 无醇：不含酒精的特调
+                9. 如果确实无法可靠补充某字段，可返回 null、[] 或 {}，不要输出解释文字。
+                10. serviceNotes 必须返回字符串数组，每一项是一条服务或调制备注；如果没有可返回 []。
+                11. 只返回 JSON 对象，不要输出 Markdown 代码块，不要输出额外说明。
+                12. 以下字段必须返回字符串或 null，绝不能返回数组或对象：
                    name, englishName, category, heroImage, difficulty, abv, glass, garnish, highlight, subtitle, description, story。
-                12. 为适配前端 UI，所有字段必须遵守以下字数与数量限制，超出时请主动压缩、改写或提炼：
+                13. 为适配前端 UI，所有字段必须遵守以下字数与数量限制，超出时请主动压缩、改写或提炼：
                 
                 - name：2-8字
                 - englishName：1-24字符
@@ -107,7 +116,7 @@ public class AdminPageAiGenerateServiceImpl implements AdminPageAiGenerateServic
                 - steps[].title：2-8字
                 - steps[].detail：16-44字
                 
-                13. 文案风格要求：
+                14. 文案风格要求：
                 
                 - 面向普通用户，不要写“字段”“接口”“模型”“解析阶段”“开发者”“数据库”等面向开发的词。
                 - 用语自然、克制、专业，像酒单或品牌内容，不要写得像百科或论文。

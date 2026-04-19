@@ -50,6 +50,10 @@ public class AdminPageExtractServiceImpl implements AdminPageExtractService {
     private static final Pattern ABV_LABELED_PATTERN = Pattern.compile(
             "(?is)(?:abv|alcohol\\s*by\\s*volume|alcohol\\s*content|alcohol\\s*level)[^\\d%]{0,40}(\\d{1,2}(?:\\.\\d{1,2})?\\s*%)"
     );
+    private static final Pattern OG_IMAGE_META_PATTERN = Pattern.compile(
+            "(?is)<meta[^>]*\\bproperty=[\"']og:image[\"'][^>]*\\bcontent=[\"']([^\"']+)[\"'][^>]*>"
+                    + "|<meta[^>]*\\bcontent=[\"']([^\"']+)[\"'][^>]*\\bproperty=[\"']og:image[\"'][^>]*>"
+    );
 
     private final ObjectMapper objectMapper;
 
@@ -73,7 +77,7 @@ public class AdminPageExtractServiceImpl implements AdminPageExtractService {
         fieldSources.put("name", resolveNameSource(recipeJsonLd, nextData));
         fieldSources.put("englishName", missingSource("当前站点解析器未实现英文名提取"));
         fieldSources.put("category", missingSource("当前站点解析器未实现分类提取"));
-        fieldSources.put("heroImage", resolveHeroImageSource(recipeJsonLd));
+        fieldSources.put("heroImage", resolveHeroImageSource(recipeJsonLd, html));
         fieldSources.put("difficulty", resolveDifficultySource(nextData, difficulty));
         fieldSources.put("abv", resolveAbvSource(nextData, html, abv));
         fieldSources.put("glass", resolveGlassSource(nextData));
@@ -98,7 +102,7 @@ public class AdminPageExtractServiceImpl implements AdminPageExtractService {
                 .name(extractName(recipeJsonLd, nextData))
                 .englishName(null)
                 .category(null)
-                .heroImage(extractHeroImage(recipeJsonLd))
+                .heroImage(extractHeroImage(recipeJsonLd, html))
                 .difficulty(difficulty)
                 .abv(abv)
                 .glass(extractGlass(nextData))
@@ -186,7 +190,19 @@ public class AdminPageExtractServiceImpl implements AdminPageExtractService {
         return textAt(nextData, "props", "pageProps", "cocktail", "name");
     }
 
-    private String extractHeroImage(JsonNode recipeJsonLd) {
+    private String extractHeroImage(JsonNode recipeJsonLd, String html) {
+        String fromJsonLd = extractHeroImageFromRecipeJsonLd(recipeJsonLd);
+        String fromMeta = extractOpenGraphImage(html);
+        if (fromJsonLd != null && isLikelyVideoThumbnailUrl(fromJsonLd) && fromMeta != null) {
+            return fromMeta;
+        }
+        if (fromJsonLd != null) {
+            return fromJsonLd;
+        }
+        return fromMeta;
+    }
+
+    private String extractHeroImageFromRecipeJsonLd(JsonNode recipeJsonLd) {
         if (recipeJsonLd == null) {
             return null;
         }
@@ -201,6 +217,27 @@ public class AdminPageExtractServiceImpl implements AdminPageExtractService {
         }
 
         return cleanQuotedText(imageNode.get("url"));
+    }
+
+    private String extractOpenGraphImage(String html) {
+        if (html == null || html.isBlank()) {
+            return null;
+        }
+        Matcher matcher = OG_IMAGE_META_PATTERN.matcher(html);
+        if (!matcher.find()) {
+            return null;
+        }
+        return trimToNull(matcher.group(1) != null ? matcher.group(1) : matcher.group(2));
+    }
+
+    private boolean isLikelyVideoThumbnailUrl(String imageUrl) {
+        if (imageUrl == null) {
+            return false;
+        }
+        String lower = imageUrl.toLowerCase(Locale.ROOT);
+        return lower.contains("wistia")
+                || lower.contains("/deliveries/")
+                || lower.contains("video");
     }
 
     private String extractGlass(JsonNode nextData) {
@@ -460,9 +497,17 @@ public class AdminPageExtractServiceImpl implements AdminPageExtractService {
         return missingSource("未找到 name");
     }
 
-    private AdminPageExtractFieldsResponse.FieldSource resolveHeroImageSource(JsonNode recipeJsonLd) {
-        if (extractHeroImage(recipeJsonLd) != null) {
+    private AdminPageExtractFieldsResponse.FieldSource resolveHeroImageSource(JsonNode recipeJsonLd, String html) {
+        String fromJsonLd = extractHeroImageFromRecipeJsonLd(recipeJsonLd);
+        String fromMeta = extractOpenGraphImage(html);
+        if (fromJsonLd != null && isLikelyVideoThumbnailUrl(fromJsonLd) && fromMeta != null) {
+            return extractedSource("meta", "检测到 JSON-LD 图片疑似视频缩略图，改用 og:image");
+        }
+        if (fromJsonLd != null) {
             return extractedSource("jsonld", "来自 Recipe JSON-LD 的 image.url");
+        }
+        if (fromMeta != null) {
+            return extractedSource("meta", "来自页面元信息 og:image");
         }
         return missingSource("未找到 heroImage");
     }

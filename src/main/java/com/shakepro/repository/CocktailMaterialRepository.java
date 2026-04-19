@@ -9,6 +9,8 @@ public interface CocktailMaterialRepository extends JpaRepository<CocktailMateri
 
     List<CocktailMaterial> findByCocktailId(Long cocktailId);
 
+    List<CocktailMaterial> findByCocktailIdOrderBySortOrderAscIdAsc(Long cocktailId);
+
     boolean existsByMaterialId(Long materialId);
 
     void deleteByCocktailId(Long cocktailId);
