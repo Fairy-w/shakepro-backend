@@ -117,6 +117,7 @@ export interface AdminCocktailDetail {
   name: string
   englishName?: string | null
   category?: string | null
+  sourceUrl?: string | null
   heroImage?: string | null
   difficulty?: string | null
   abv?: string | null
@@ -308,6 +309,131 @@ export interface OssFileRecordResult {
   fileId: number
 }
 
+export interface AdminCommunityPostAuthor {
+  userId: number
+  username?: string | null
+  nickname?: string | null
+  avatarUrl?: string | null
+}
+
+export interface AdminCommunityPostListItem {
+  postId: string
+  title?: string | null
+  summary?: string | null
+  coverImage?: string | null
+  author: AdminCommunityPostAuthor
+  tags: string[]
+  likeCount: number
+  commentCount: number
+  favoriteCount: number
+  status: 'PUBLISHED' | 'OFFLINE' | string
+  publishTime: string
+}
+
+export interface AdminCommunityPostDetail {
+  postId: string
+  title?: string | null
+  summary?: string | null
+  content: string
+  coverImage?: string | null
+  images: string[]
+  author: AdminCommunityPostAuthor
+  tags: string[]
+  likeCount: number
+  commentCount: number
+  favoriteCount: number
+  status: 'PUBLISHED' | 'OFFLINE' | string
+  publishTime: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type RecommendStrategyMode = 'MODEL_FIRST' | 'MANUAL_FIRST' | 'MANUAL_ONLY'
+
+export interface AdminRecommendRules {
+  strategyMode: RecommendStrategyMode
+  topk: number
+  allowDecoder: boolean
+  allowFallback: boolean
+  manualPinnedIds: number[]
+  blockedIds: number[]
+  whitelistIds: number[]
+}
+
+export interface AdminRecommendSlotSummary {
+  id: number
+  slotCode: string
+  slotName: string
+  description?: string | null
+  enabled: boolean
+  publishedVersion: number
+  publishedAt?: string | null
+  publishedBy?: string | null
+  updatedAt?: string | null
+}
+
+export interface AdminRecommendSlotDetail extends AdminRecommendSlotSummary {
+  createdAt?: string | null
+  draftRules: AdminRecommendRules
+  publishedRules: AdminRecommendRules
+}
+
+export interface AdminRecommendSlotRules {
+  slotId: number
+  slotCode: string
+  publishedVersion: number
+  draftRules: AdminRecommendRules
+  publishedRules: AdminRecommendRules
+}
+
+export interface AdminRecommendPublishResult {
+  slotId: number
+  slotCode: string
+  publishedVersion: number
+  publishedAt: string
+  publishedBy: string
+}
+
+export interface AdminRecommendSlotVersionItem {
+  id: number
+  slotId: number
+  versionNo: number
+  publishedBy?: string | null
+  publishedAt: string
+  rules: AdminRecommendRules
+}
+
+export interface CocktailRecommendStatus {
+  indexSize?: number | null
+  indexDim?: number | null
+  semIdDim?: number | null
+  decoderEnabled?: boolean | null
+  decoderReason?: string | null
+  device?: string | null
+  backendFallback?: boolean | null
+  backendMessage?: string | null
+  slotCode?: string | null
+  slotVersion?: number | null
+  strategyMode?: string | null
+}
+
+export interface CocktailRecommendItem {
+  rank: number
+  id: number
+  code?: number[] | null
+  score?: number[] | null
+  cocktail?: AdminCocktailListItem | null
+}
+
+export interface CocktailRecommendResult {
+  mode: string
+  seedId: number
+  seedCode?: number[] | null
+  predCode?: number[] | null
+  items: CocktailRecommendItem[]
+  status?: CocktailRecommendStatus | null
+}
+
 const AI_GENERATE_TIMEOUT_MS = 60000
 
 export interface MaterialPayload {
@@ -362,6 +488,51 @@ export const adminApi = {
   },
   saveOssFileRecord(data: OssFileRecordPayload) {
     return http.post('/files', data) as Promise<OssFileRecordResult>
+  },
+  getCommunityPosts(params: { keyword?: string; authorKeyword?: string; status?: string; page?: number; size?: number }) {
+    return http.get('/admin/community/posts', { params }) as Promise<PageResult<AdminCommunityPostListItem>>
+  },
+  getCommunityPostDetail(postId: string) {
+    return http.get(`/admin/community/posts/${encodeURIComponent(postId)}`) as Promise<AdminCommunityPostDetail>
+  },
+  updateCommunityPostStatus(postId: string, status: 'PUBLISHED' | 'OFFLINE') {
+    return http.put(`/admin/community/posts/${encodeURIComponent(postId)}/status`, { status }) as Promise<AdminCommunityPostDetail>
+  },
+  getRecommendSlots() {
+    return http.get('/admin/recommend/slots') as Promise<AdminRecommendSlotSummary[]>
+  },
+  createRecommendSlot(data: {
+    slotCode: string
+    slotName: string
+    description?: string
+    enabled?: boolean
+    draftRules?: Partial<AdminRecommendRules>
+  }) {
+    return http.post('/admin/recommend/slots', data) as Promise<AdminRecommendSlotDetail>
+  },
+  getRecommendSlot(slotId: number) {
+    return http.get(`/admin/recommend/slots/${slotId}`) as Promise<AdminRecommendSlotDetail>
+  },
+  updateRecommendSlot(slotId: number, data: { slotName: string; description?: string; enabled?: boolean }) {
+    return http.put(`/admin/recommend/slots/${slotId}`, data) as Promise<AdminRecommendSlotDetail>
+  },
+  getRecommendSlotRules(slotId: number) {
+    return http.get(`/admin/recommend/slots/${slotId}/rules`) as Promise<AdminRecommendSlotRules>
+  },
+  saveRecommendSlotRules(slotId: number, data: Partial<AdminRecommendRules>) {
+    return http.put(`/admin/recommend/slots/${slotId}/rules`, data) as Promise<AdminRecommendSlotRules>
+  },
+  publishRecommendSlot(slotId: number) {
+    return http.post(`/admin/recommend/slots/${slotId}/publish`) as Promise<AdminRecommendPublishResult>
+  },
+  listRecommendSlotVersions(slotId: number) {
+    return http.get(`/admin/recommend/slots/${slotId}/versions`) as Promise<AdminRecommendSlotVersionItem[]>
+  },
+  previewRecommendSlot(slotId: number, data: { seedId: number; topk?: number }) {
+    return http.post(`/admin/recommend/slots/${slotId}/preview`, data) as Promise<CocktailRecommendResult>
+  },
+  deleteCommunityPost(postId: string) {
+    return http.delete(`/admin/community/posts/${encodeURIComponent(postId)}`) as Promise<void>
   },
   getDashboard() {
     return http.get('/admin/dashboard') as Promise<DashboardStats>

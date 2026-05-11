@@ -21,6 +21,7 @@ export interface GeneratedEditorFormSnapshot {
   name: string
   englishName: string
   category: string
+  sourceUrl: string
   heroImage: string
   difficulty: string
   abv: string
@@ -54,6 +55,7 @@ export function buildGeneratedPayloadFromForm(form: GeneratedEditorFormSnapshot)
     name: form.name.trim(),
     englishName: form.englishName.trim() || undefined,
     category: form.category.trim() || undefined,
+    sourceUrl: form.sourceUrl.trim() || undefined,
     heroImage: form.heroImage.trim() || undefined,
     difficulty: form.difficulty.trim() || undefined,
     abv: form.abv.trim() || undefined,
