@@ -445,15 +445,20 @@ function closeImagePreview() {
           description="查看 AI 补全后的结果，并决定是否保存到鸡尾酒库。"
         >
           <template #action>
-            <button class="button-primary" :disabled="saveLoading || !generateResult" @click="saveGeneratedCocktail">
-              {{ saveLoading ? '保存中...' : '保存到鸡尾酒库' }}
+            <button class="button-primary" :disabled="saveLoading || generateLoading || !generateResult" @click="saveGeneratedCocktail">
+              {{ generateLoading ? 'AI 生成中...' : saveLoading ? '保存中...' : '保存到鸡尾酒库' }}
             </button>
           </template>
 
           <p v-if="saveError" class="error-text">{{ saveError }}</p>
           <p v-if="saveSuccess" class="success-text">{{ saveSuccess }}</p>
 
-          <div v-if="generateResult" class="review-grid">
+          <div v-if="generateLoading" class="loading-panel">
+            <span class="spinner" aria-hidden="true"></span>
+            <p>AI 正在生成最终结果，请稍候...</p>
+          </div>
+
+          <div v-else-if="generateResult" class="review-grid">
             <AdminWorkspacePanel title="最终字段" class="field-panel">
               <div v-for="item in fieldRows" :key="item.key" class="field-row">
                 <div>
@@ -673,10 +678,34 @@ function closeImagePreview() {
   font-weight: 700;
 }
 
+.loading-panel {
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(15, 118, 110, 0.2);
+  border-top-color: var(--success);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 .success-text {
   margin: 0;
   color: var(--success);
   font-weight: 700;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .image-preview-modal {

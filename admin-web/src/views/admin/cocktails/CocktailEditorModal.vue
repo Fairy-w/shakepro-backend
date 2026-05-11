@@ -122,6 +122,10 @@ function onHeroImageSelected(event: Event) {
               <input v-model="form.garnish" class="field" type="text" placeholder="例如：青柠角" />
             </label>
             <label class="span-two">
+              <span>来源链接（可选）</span>
+              <input v-model="form.sourceUrl" class="field" type="url" placeholder="https://..." />
+            </label>
+            <label class="span-two">
               <span>主图地址</span>
               <input v-model="form.heroImage" class="field" type="text" placeholder="https://..." />
               <div class="hero-upload-row">

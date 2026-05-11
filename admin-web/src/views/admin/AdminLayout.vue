@@ -52,6 +52,12 @@ const navItems: NavItem[] = [
     pulse: '灵感沉淀',
   },
   {
+    label: '社区',
+    to: '/community',
+    group: '用户与收藏',
+    pulse: '帖子联调',
+  },
+  {
     label: '网页抓取',
     to: '/crawler',
     group: 'AI 工作台',

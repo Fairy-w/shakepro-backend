@@ -22,6 +22,8 @@ const submitting = ref(false)
 const uploadingHeroImage = ref(false)
 const uploadImageError = ref('')
 const uploadImageSuccess = ref('')
+const actionError = ref('')
+const actionSuccess = ref('')
 const keyword = ref('')
 const category = ref('')
 const categoryOptions = ref<string[]>([])
@@ -56,6 +58,7 @@ function createInitialFormState(): GeneratedEditorFormSnapshot {
     name: '',
     englishName: '',
     category: '',
+    sourceUrl: '',
     heroImage: '',
     difficulty: '',
     abv: '',
@@ -76,7 +79,6 @@ function createInitialFormState(): GeneratedEditorFormSnapshot {
 
 const form = reactive<GeneratedEditorFormSnapshot>(createInitialFormState())
 
-const hasMaterialOptions = computed(() => materialOptions.value.length > 0)
 const visibleCount = computed(() => pageData.value.content.length)
 const formCompletion = computed(() => {
   const checks = [
@@ -89,6 +91,34 @@ const formCompletion = computed(() => {
   ]
   return Math.round((checks.filter(Boolean).length / checks.length) * 100)
 })
+
+function syncSavedCocktailInCurrentPage(saved: AdminCocktailDetail) {
+  const index = pageData.value.content.findIndex((item) => item.id === saved.id)
+  if (index < 0) return
+
+  const current = pageData.value.content[index]
+  if (!current) return
+  const nextCategory = saved.category || null
+  const activeCategory = category.value.trim().toLowerCase()
+  if (activeCategory && (!nextCategory || nextCategory.toLowerCase() !== activeCategory)) {
+    pageData.value.content.splice(index, 1)
+    return
+  }
+
+  pageData.value.content[index] = {
+    id: current.id,
+    name: saved.name,
+    englishName: saved.englishName || null,
+    category: nextCategory,
+    heroImage: saved.heroImage || null,
+    difficulty: saved.difficulty || null,
+    abv: saved.abv || null,
+    imageUrl: saved.imageUrl || null,
+    alcoholLevel: saved.alcoholLevel ?? null,
+    createdAt: current.createdAt,
+    updatedAt: saved.updatedAt || current.updatedAt,
+  }
+}
 
 async function loadCocktails(nextPage = 0) {
   loading.value = true
@@ -126,6 +156,8 @@ function resetForm() {
   submitError.value = ''
   uploadImageError.value = ''
   uploadImageSuccess.value = ''
+  actionError.value = ''
+  actionSuccess.value = ''
   patchFormState(createInitialFormState())
 }
 
@@ -136,13 +168,19 @@ function openCreate() {
 }
 
 async function openEdit(item: AdminCocktailListItem) {
+  actionError.value = ''
+  actionSuccess.value = ''
   uploadImageError.value = ''
   uploadImageSuccess.value = ''
-  const detail = await adminApi.getCocktail(item.id)
-  fillForm(detail)
-  editingId.value = item.id
-  editingFromDetail.value = false
-  showEditorModal.value = true
+  try {
+    const detail = await adminApi.getCocktail(item.id)
+    fillForm(detail)
+    editingId.value = item.id
+    editingFromDetail.value = false
+    showEditorModal.value = true
+  } catch (error) {
+    actionError.value = error instanceof Error ? error.message : '读取鸡尾酒详情失败，请稍后重试'
+  }
 }
 
 function fillForm(detail: AdminCocktailDetail) {
@@ -150,6 +188,7 @@ function fillForm(detail: AdminCocktailDetail) {
     name: detail.name || '',
     englishName: detail.englishName || '',
     category: detail.category || '',
+    sourceUrl: detail.sourceUrl || '',
     heroImage: detail.heroImage || detail.imageUrl || '',
     difficulty: detail.difficulty || '',
     abv: detail.abv || (detail.alcoholLevel != null ? `${detail.alcoholLevel}%` : ''),
@@ -185,6 +224,8 @@ async function submit() {
   submitError.value = ''
   uploadImageError.value = ''
   uploadImageSuccess.value = ''
+  actionError.value = ''
+  actionSuccess.value = ''
   if (!form.name.trim()) {
     submitError.value = '名称不能为空'
     return
@@ -207,24 +248,32 @@ async function submit() {
   submitting.value = true
   try {
     const currentEditingId = editingId.value
+    const isEditing = currentEditingId !== null
     let saved: AdminCocktailDetail
-    if (editingId.value) {
-      saved = await adminApi.updateGeneratedCocktail(editingId.value, payload)
+    if (isEditing) {
+      saved = await adminApi.updateGeneratedCocktail(currentEditingId, payload)
     } else {
       saved = await adminApi.createGeneratedCocktail(payload)
     }
 
-    if (currentEditingId && selectedDetail.value?.id === currentEditingId) {
+    if (isEditing && selectedDetail.value?.id === currentEditingId) {
       selectedDetail.value = saved
     }
-    if (editingFromDetail.value && currentEditingId) {
+    if (editingFromDetail.value && isEditing) {
       selectedDetail.value = saved
       showDetailModal.value = true
     }
 
+    try {
+      await loadCocktails(pageData.value.number)
+    } catch (error) {
+      syncSavedCocktailInCurrentPage(saved)
+      actionError.value = `保存成功，但列表刷新失败：${error instanceof Error ? error.message : '请点击“搜索”重试'}`
+    }
+
     editingFromDetail.value = false
     showEditorModal.value = false
-    await loadCocktails(pageData.value.number)
+    actionSuccess.value = isEditing ? '鸡尾酒信息已更新' : '鸡尾酒已创建'
   } catch (error) {
     submitError.value = error instanceof Error ? error.message : '保存失败，请稍后重试'
   } finally {
@@ -277,10 +326,16 @@ async function remove(item: AdminCocktailListItem) {
 }
 
 async function openDetail(item: AdminCocktailListItem) {
+  actionError.value = ''
+  actionSuccess.value = ''
   showDetailModal.value = true
   detailLoading.value = true
+  selectedDetail.value = null
   try {
     selectedDetail.value = await adminApi.getCocktail(item.id)
+  } catch (error) {
+    showDetailModal.value = false
+    actionError.value = error instanceof Error ? error.message : '读取鸡尾酒详情失败，请稍后重试'
   } finally {
     detailLoading.value = false
   }
@@ -307,10 +362,12 @@ function closeEditor() {
 }
 
 function searchCocktails() {
+  actionSuccess.value = ''
   loadCocktails(0)
 }
 
 function resetFilters() {
+  actionSuccess.value = ''
   keyword.value = ''
   category.value = ''
   loadCocktails(0)
@@ -333,8 +390,8 @@ onMounted(async () => {
         <span class="badge subtle">可关联材料 {{ materialOptions.length }}</span>
       </template>
       <template #actions>
-        <button class="button-primary create-button" :disabled="materialsLoading || !hasMaterialOptions" @click="openCreate">
-          {{ materialsLoading ? '材料准备中...' : '新建鸡尾酒' }}
+        <button class="button-primary create-button" @click="openCreate">
+          {{ materialsLoading ? '新建鸡尾酒（材料加载中）' : '新建鸡尾酒' }}
         </button>
       </template>
     </AdminPageHeader>
@@ -355,6 +412,8 @@ onMounted(async () => {
       </button>
       <button class="button-ghost" :disabled="loading" @click="resetFilters">重置筛选</button>
     </AdminToolbar>
+    <p v-if="actionSuccess" class="page-success">{{ actionSuccess }}</p>
+    <p v-if="actionError" class="page-error">{{ actionError }}</p>
 
     <div class="cocktail-grid">
       <CocktailListCard
@@ -422,6 +481,18 @@ onMounted(async () => {
 
 .category-select {
   min-width: 180px;
+}
+
+.page-error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.page-success {
+  margin: 0;
+  color: var(--success);
+  font-weight: 700;
 }
 
 .cocktail-grid {
